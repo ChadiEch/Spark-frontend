@@ -1,7 +1,11 @@
-# Use Node.js 18 as the base image
-FROM node:18-alpine
+# Multi-stage build for Vite React app
+# Build stage
+FROM node:18-alpine AS builder
 
-# Set the working directory
+# Install necessary build tools
+RUN apk add --no-cache python3 make g++
+
+# Set working directory
 WORKDIR /app
 
 # Copy package files
@@ -10,15 +14,23 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci
 
-# Copy the rest of the application
+# Copy source code
 COPY . .
 
-# Ensure node_modules/.bin is in PATH and build the application
-ENV PATH="/app/node_modules/.bin:${PATH}"
-RUN npm run build
+# Build the application using npx to avoid permission issues
+RUN npx vite build
 
-# Expose the port
-EXPOSE 8080
+# Production stage
+FROM nginx:alpine
 
-# Start the application
-CMD ["npm", "run", "serve"]
+# Copy built files from builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Expose port
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

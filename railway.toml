@@ -2,7 +2,7 @@
 builder = "DOCKERFILE"
 
 [deploy]
-startCommand = "vite preview --port ${PORT:-8080}"
+startCommand = "nginx -g 'daemon off;'"
 
 [variables]
 NODE_VERSION = "18"
