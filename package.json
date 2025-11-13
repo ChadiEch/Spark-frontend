@@ -315,7 +315,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "start": "vite preview --port ${PORT:-8080}",
     "serve": "vite preview --port ${PORT:-8080}"

@@ -3,3 +3,10 @@ builder = "nixpacks"
 
 [deploy]
 startCommand = "npm run serve"
+
+[variables]
+NODE_VERSION = "18"
+
+[phases]
+install = "npm ci"
+build = "npm run build"
