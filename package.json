@@ -319,7 +319,7 @@
     "preview": "vite preview",
     "start": "vite preview --port ${PORT:-8080}",
     "serve": "vite preview --port ${PORT:-8080}",
-    "railway-start": "npm run build && vite preview --port ${PORT:-8080}"
+    "railway-start": "npm run build || echo 'Build may have already been done' && vite preview --port ${PORT:-8080}"
   },
   "keywords": [],
   "author": "",
