@@ -1,9 +1,8 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npx vite build"
 
 [deploy]
-startCommand = "npx vite preview --port ${PORT:-8080}"
+startCommand = "npm run railway-start"
 
 [variables]
 NODE_VERSION = "18"
@@ -12,3 +11,4 @@ NIXPACKS_NO_PINET = "1"
 
 [phases]
 install = "npm ci"
+build = "echo 'Skipping build phase - will build on start'"

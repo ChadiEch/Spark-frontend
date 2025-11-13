@@ -315,10 +315,11 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node build.js",
     "preview": "vite preview",
     "start": "vite preview --port ${PORT:-8080}",
-    "serve": "vite preview --port ${PORT:-8080}"
+    "serve": "vite preview --port ${PORT:-8080}",
+    "railway-start": "npm run build && vite preview --port ${PORT:-8080}"
   },
   "keywords": [],
   "author": "",
