@@ -1,0 +1,998 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { PageLayout } from '../components/layout/PageLayout';
+import { Button } from "../components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { Badge } from "../components/ui/badge"
+import { Input } from "../components/ui/input"
+import { Label } from "../components/ui/label"
+import { Textarea } from "../components/ui/textarea"
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select"
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "../components/ui/dialog"
+import ExportButton from "../components/ExportButton"
+import { 
+  Image as ImageIcon, 
+  Video, 
+  FileText, 
+  Upload, 
+  Search, 
+  Filter,
+  Eye,
+  Edit,
+  Trash2,
+  Download,
+  Grid3X3,
+  List,
+  FolderOpen,
+  Calendar,
+  Tag,
+  X
+} from "lucide-react"
+// Import our data hooks
+import { useAssets, useCampaigns, usePosts, useGoals } from "../hooks/useData"
+import { Asset, Campaign, Post, Goal } from "../types"
+import { toast } from "../components/ui/use-toast"
+
+export default function Assets() {
+  const { data: assetsData, loading, deleteItem, refetch, updateItem } = useAssets()
+  const { campaigns, loading: campaignsLoading } = useCampaigns()
+  const { data: postsData, loading: postsLoading } = usePosts()
+  const { goals, loading: goalsLoading } = useGoals()
+  
+  const assets = assetsData || []
+  const posts = postsData || []
+  const deleteAsset = deleteItem || (async (id: string) => { console.warn('Delete not implemented'); return false; })
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filter, setFilter] = useState('all')
+  const [showFilterMenu, setShowFilterMenu] = useState(false)
+  const [view, setView] = useState<'grid' | 'list'>('grid')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null)
+  const [viewingAsset, setViewingAsset] = useState<Asset | null>(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false)
+  const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set())
+  const [assetForm, setAssetForm] = useState({
+    name: '',
+    tags: [] as string[],
+    campaignId: '',
+    newTag: ''
+  })
+  const navigate = useNavigate()
+
+  // Initialize form when editing asset
+  useEffect(() => {
+    if (editingAsset) {
+      setAssetForm({
+        name: editingAsset.name,
+        tags: [...editingAsset.tags],
+        campaignId: editingAsset.campaign?.id || '',
+        newTag: ''
+      })
+    }
+  }, [editingAsset])
+
+  if (loading || campaignsLoading || postsLoading || goalsLoading) {
+    return (
+      <PageLayout>
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading assets...</p>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  const filteredAssets = assets.filter(asset => {
+    const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         asset.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesFilter = filter === 'all' || asset.kind === filter.toUpperCase() as any;
+    return matchesSearch && matchesFilter;
+  });
+
+  const getAssetIcon = (kind: string) => {
+    switch (kind) {
+      case 'IMAGE': return ImageIcon;
+      case 'VIDEO': return Video;
+      case 'DOC': return FileText;
+      default: return FolderOpen;
+    }
+  };
+
+  const getAssetColor = (kind: string) => {
+    switch (kind) {
+      case 'IMAGE': return 'bg-blue-100 text-blue-600';
+      case 'VIDEO': return 'bg-purple-100 text-purple-600';
+      case 'DOC': return 'bg-green-100 text-green-600';
+      default: return 'bg-gray-100 text-gray-600';
+    }
+  };
+
+  const handleDeleteAsset = async (assetId: string) => {
+    if (window.confirm('Are you sure you want to delete this asset?')) {
+      const success = await deleteAsset(assetId);
+      if (success) {
+        toast({
+          title: "Asset Deleted",
+          description: "The asset has been deleted successfully!",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to delete asset. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleViewAsset = (assetId: string) => {
+    // For view, we'll show the asset in a view-only modal
+    const asset = assets.find(a => a.id === assetId);
+    if (asset) {
+      setViewingAsset(asset);
+      setIsViewModalOpen(true);
+    }
+  };
+
+  const handleEditAsset = (assetId: string) => {
+    const asset = assets.find(a => a.id === assetId);
+    if (asset) {
+      setEditingAsset(asset);
+      setIsEditModalOpen(true);
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    
+    try {
+      // Import the asset service
+      const { assetService } = await import('../services/dataService');
+      
+      // Upload the file
+      const uploadedAsset = await assetService.upload(file);
+      
+      if (uploadedAsset) {
+        toast({
+          title: "Asset Uploaded",
+          description: "Your asset has been uploaded successfully!",
+        });
+        // Refresh the assets list
+        refetch();
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to upload asset. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error('Error uploading asset:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to upload asset. Please try again.",
+        variant: "destructive",
+      });
+    }
+    
+    // Reset the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleUploadAsset = () => {
+    // Trigger the file input click
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const applyFilter = (filterType: string) => {
+    setFilter(filterType);
+    setShowFilterMenu(false);
+  };
+
+  const handleSaveAsset = async () => {
+    if (!editingAsset) return;
+
+    try {
+      // Find the selected campaign object
+      const selectedCampaign = campaigns.find(c => c.id === assetForm.campaignId);
+      
+      // Prepare update data with proper typing
+      const updateData: any = {
+        name: assetForm.name,
+        tags: assetForm.tags,
+        campaign: assetForm.campaignId || null
+      };
+      
+      const updatedAsset = await updateItem?.(editingAsset.id, updateData);
+
+      if (updatedAsset) {
+        toast({
+          title: "Asset Updated",
+          description: "Your asset has been updated successfully!",
+        });
+        setIsEditModalOpen(false);
+        refetch();
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update asset. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error('Error updating asset:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update asset. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddTag = () => {
+    if (assetForm.newTag.trim() && !assetForm.tags.includes(assetForm.newTag.trim())) {
+      setAssetForm({
+        ...assetForm,
+        tags: [...assetForm.tags, assetForm.newTag.trim()],
+        newTag: ''
+      });
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setAssetForm({
+      ...assetForm,
+      tags: assetForm.tags.filter(tag => tag !== tagToRemove)
+    });
+  };
+
+  const handleFormChange = (field: string, value: string) => {
+    setAssetForm({
+      ...assetForm,
+      [field]: value
+    });
+  };
+
+  const toggleAssetSelection = (assetId: string) => {
+    const newSelectedAssets = new Set(selectedAssets);
+    if (newSelectedAssets.has(assetId)) {
+      newSelectedAssets.delete(assetId);
+    } else {
+      newSelectedAssets.add(assetId);
+    }
+    setSelectedAssets(newSelectedAssets);
+  };
+
+  const selectAllAssets = () => {
+    const newSelectedAssets = new Set(filteredAssets.map(asset => asset.id));
+    setSelectedAssets(newSelectedAssets);
+  };
+
+  const clearSelection = () => {
+    setSelectedAssets(new Set());
+  };
+
+  const handleDownloadAsset = (asset: Asset) => {
+    const assetUrl = asset.url.startsWith('http') ? asset.url : `${import.meta.env.VITE_API_BASE_URL || ''}${asset.url}`;
+    window.open(assetUrl, '_blank');
+  };
+
+  const handleDownloadSelectedAssets = () => {
+    if (selectedAssets.size === 0) {
+      toast({
+        title: "No Assets Selected",
+        description: "Please select at least one asset to download.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    selectedAssets.forEach(assetId => {
+      const asset = assets.find(a => a.id === assetId);
+      if (asset) {
+        handleDownloadAsset(asset);
+      }
+    });
+    
+    toast({
+      title: "Download Started",
+      description: `Downloading ${selectedAssets.size} asset(s).`,
+    });
+  };
+
+  const handleViewFullAsset = (asset: Asset) => {
+    const assetUrl = asset.url.startsWith('http') ? asset.url : `${import.meta.env.VITE_API_BASE_URL || ''}${asset.url}`;
+    window.open(assetUrl, '_blank');
+  };
+
+  // Modify existing functions to handle selection
+  const originalHandleViewAsset = handleViewAsset;
+  const handleViewAsset = (assetId: string) => {
+    // For view, we'll show the asset in a view-only modal
+    const asset = assets.find(a => a.id === assetId);
+    if (asset) {
+      setViewingAsset(asset);
+      setIsViewModalOpen(true);
+    }
+  };
+
+  const originalHandleDeleteAsset = handleDeleteAsset;
+  const handleDeleteAsset = async (assetId: string) => {
+    if (window.confirm('Are you sure you want to delete this asset?')) {
+      const success = await deleteAsset(assetId);
+      if (success) {
+        toast({
+          title: "Asset Deleted",
+          description: "The asset has been deleted successfully!",
+        });
+        // Remove from selection if it was selected
+        if (selectedAssets.has(assetId)) {
+          const newSelectedAssets = new Set(selectedAssets);
+          newSelectedAssets.delete(assetId);
+          setSelectedAssets(newSelectedAssets);
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to delete asset. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const toggleAssetSelection = (assetId: string) => {
+    const newSelectedAssets = new Set(selectedAssets);
+    if (newSelectedAssets.has(assetId)) {
+      newSelectedAssets.delete(assetId);
+    } else {
+      newSelectedAssets.add(assetId);
+    }
+    setSelectedAssets(newSelectedAssets);
+  };
+
+  const selectAllAssets = () => {
+    const newSelectedAssets = new Set(filteredAssets.map(asset => asset.id));
+    setSelectedAssets(newSelectedAssets);
+  };
+
+  const clearSelection = () => {
+    setSelectedAssets(new Set());
+  };
+
+  const handleDownloadAsset = (asset: Asset) => {
+    const assetUrl = asset.url.startsWith('http') ? asset.url : `${import.meta.env.VITE_API_BASE_URL || ''}${asset.url}`;
+    window.open(assetUrl, '_blank');
+  };
+
+  const handleDownloadSelectedAssets = () => {
+    if (selectedAssets.size === 0) {
+      toast({
+        title: "No Assets Selected",
+        description: "Please select at least one asset to download.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    selectedAssets.forEach(assetId => {
+      const asset = assets.find(a => a.id === assetId);
+      if (asset) {
+        handleDownloadAsset(asset);
+      }
+    });
+    
+    toast({
+      title: "Download Started",
+      description: `Downloading ${selectedAssets.size} asset(s).`,
+    });
+  };
+
+  const handleViewFullAsset = (asset: Asset) => {
+    const assetUrl = asset.url.startsWith('http') ? asset.url : `${import.meta.env.VITE_API_BASE_URL || ''}${asset.url}`;
+    window.open(assetUrl, '_blank');
+  };
+
+  // Override existing handleDeleteAsset to handle selection
+  const originalHandleDeleteAsset = handleDeleteAsset;
+  const handleDeleteAsset = async (assetId: string) => {
+    if (window.confirm('Are you sure you want to delete this asset?')) {
+      const success = await deleteAsset(assetId);
+      if (success) {
+        toast({
+          title: "Asset Deleted",
+          description: "The asset has been deleted successfully!",
+        });
+        // Remove from selection if it was selected
+        if (selectedAssets.has(assetId)) {
+          const newSelectedAssets = new Set(selectedAssets);
+          newSelectedAssets.delete(assetId);
+          setSelectedAssets(newSelectedAssets);
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to delete asset. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    
+    try {
+      // Import the asset service
+      const { assetService } = await import('../services/dataService');
+      
+      // Upload the file
+      const uploadedAsset = await assetService.upload(file);
+      
+      if (uploadedAsset) {
+        toast({
+          title: "Asset Uploaded",
+          description: "Your asset has been uploaded successfully!",
+        });
+        // Refresh the assets list
+        refetch();
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to upload asset. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error('Error uploading asset:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to upload asset. Please try again.",
+        variant: "destructive",
+      });
+    }
+    
+    // Reset the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  return (
+    <PageLayout>
+      <div className="p-6 space-y-6">
+        {/* Hidden file input */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileUpload}
+          accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          className="hidden"
+        />
+        
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold gradient-text">Assets</h1>
+            <p className="text-muted-foreground">
+              Manage your media assets and files
+            </p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <ExportButton 
+              data={assets} 
+              dataType="assets" 
+              fileName={`assets_export_${new Date().toISOString().split('T')[0]}`}
+            />
+            <Button 
+              className="gap-2 bg-gradient-primary hover:bg-gradient-primary/90" 
+              onClick={handleDownloadSelectedAssets}
+              disabled={selectedAssets.size === 0}
+            >
+              <Download className="w-4 h-4" />
+              Download Selected ({selectedAssets.size})
+            </Button>
+            <Button className="gap-2 bg-gradient-primary hover:bg-gradient-primary/90" onClick={handleUploadAsset}>
+              <Upload className="w-4 h-4" />
+              Upload Asset
+            </Button>
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Search assets..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-80"
+              />
+            </div>
+            
+            <div className="relative">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFilterMenu(!showFilterMenu)}
+                className="flex items-center space-x-1"
+              >
+                <Filter className="w-4 h-4" />
+                <span>{filter.charAt(0).toUpperCase() + filter.slice(1)}</span>
+              </Button>
+              {showFilterMenu && (
+                <div className="absolute top-full left-0 mt-1 bg-card shadow-card border border-border rounded-md w-full">
+                  <Button
+                    key="all"
+                    variant={filter === 'all' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => applyFilter('all')}
+                    className="w-full"
+                  >
+                    All
+                  </Button>
+                  <Button
+                    key="image"
+                    variant={filter === 'image' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => applyFilter('image')}
+                    className="w-full"
+                  >
+                    Images
+                  </Button>
+                  <Button
+                    key="video"
+                    variant={filter === 'video' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => applyFilter('video')}
+                    className="w-full"
+                  >
+                    Videos
+                  </Button>
+                  <Button
+                    key="document"
+                    variant={filter === 'document' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => applyFilter('document')}
+                    className="w-full"
+                  >
+                    Documents
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Button 
+              variant={view === 'grid' ? 'default' : 'outline'} 
+              size="sm"
+              onClick={() => setView('grid')}
+            >
+              <Grid3X3 className="w-4 h-4" />
+            </Button>
+            <Button 
+              variant={view === 'list' ? 'default' : 'outline'} 
+              size="sm"
+              onClick={() => setView('list')}
+            >
+              <List className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Assets View */}
+        {view === 'grid' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {filteredAssets.map(asset => {
+              const AssetIcon = getAssetIcon(asset.kind);
+              return (
+                <Card key={asset.id} className="overflow-hidden hover:shadow-card transition-shadow">
+                  <div className="aspect-square bg-muted relative">
+                    {asset.kind === 'IMAGE' ? (
+                      <img 
+                        src={asset.url.startsWith('http') ? asset.url : `${import.meta.env.VITE_API_BASE_URL || ''}${asset.url}`} 
+                        alt={asset.name} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2NjYyIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1zaXplPSIxMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlPC90ZXh0Pjwvc3ZnPg==';
+                        }}
+                      />
+                    ) : (
+                      <div className={`w-full h-full flex items-center justify-center ${getAssetColor(asset.kind)}`}>
+                        <AssetIcon className="w-12 h-12" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <div className="flex items-start justify-between">
+                      <h3 className="font-medium text-sm truncate">{asset.name}</h3>
+                      <Badge variant="secondary" className="text-xs">
+                        {asset.kind.toLowerCase()}
+                      </Badge>
+                    </div>
+                    {asset.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {asset.tags.slice(0, 3).map((tag, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                        {asset.tags.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{asset.tags.length - 3}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between mt-3">
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(asset.createdAt).toLocaleDateString()}
+                      </span>
+                      <div className="flex space-x-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleViewFullAsset(asset)}>
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditAsset(asset.id)}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownloadAsset(asset)}>
+                          <Download className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteAsset(asset.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="p-0">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-3 px-4">Asset</th>
+                    <th className="text-left py-3 px-4">Type</th>
+                    <th className="text-left py-3 px-4">Tags</th>
+                    <th className="text-left py-3 px-4">Size</th>
+                    <th className="text-left py-3 px-4">Uploaded</th>
+                    <th className="text-left py-3 px-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAssets.map(asset => {
+                    const AssetIcon = getAssetIcon(asset.kind);
+                    return (
+                      <tr key={asset.id} className="border-b hover:bg-muted/50">
+                        <td className="py-3 px-4">
+                          <div className="flex items-center">
+                            <div className={`w-10 h-10 rounded flex items-center justify-center ${getAssetColor(asset.kind)}`}>
+                              <AssetIcon className="w-5 h-5" />
+                            </div>
+                            <div className="ml-3">
+                              <p className="font-medium">{asset.name}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Badge variant="secondary">{asset.kind.toLowerCase()}</Badge>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex flex-wrap gap-1">
+                            {asset.tags.slice(0, 2).map((tag, index) => (
+                              <Badge key={index} variant="outline" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                            {asset.tags.length > 2 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{asset.tags.length - 2}
+                              </Badge>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          {asset.size ? `${(asset.size / 1024 / 1024).toFixed(2)} MB` : 'N/A'}
+                        </td>
+                        <td className="py-3 px-4">
+                          {new Date(asset.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex space-x-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleViewFullAsset(asset)}>
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleEditAsset(asset.id)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDownloadAsset(asset)}>
+                              <Download className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDeleteAsset(asset.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        )}
+
+        {filteredAssets.length === 0 && (
+          <div className="text-center py-12">
+            <FolderOpen className="w-12 h-12 mx-auto text-muted-foreground" />
+            <h3 className="mt-4 font-medium">No assets found</h3>
+            <p className="text-muted-foreground mt-1">
+              Try adjusting your search or filter to find what you're looking for.
+            </p>
+            <Button className="mt-4" onClick={handleUploadAsset}>
+              Upload Asset
+            </Button>
+          </div>
+        )}
+
+        {/* View Asset Modal */}
+        <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>View Asset</DialogTitle>
+            </DialogHeader>
+            {viewingAsset && (
+              <div className="space-y-6">
+                <div className="flex flex-col md:flex-row gap-6">
+                  <div className="md:w-1/2">
+                    <div className="aspect-square bg-muted rounded-lg overflow-hidden">
+                      {viewingAsset.kind === 'IMAGE' ? (
+                        <img 
+                          src={viewingAsset.url.startsWith('http') ? viewingAsset.url : `${import.meta.env.VITE_API_BASE_URL || ''}${viewingAsset.url}`} 
+                          alt={viewingAsset.name} 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2NjYyIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1zaXplPSIxMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlPC90ZXh0Pjwvc3ZnPg==';
+                          }}
+                        />
+                      ) : (
+                        <div className={`w-full h-full flex items-center justify-center ${getAssetColor(viewingAsset.kind)}`}>
+                          {React.createElement(getAssetIcon(viewingAsset.kind), { className: "w-16 h-16" })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="md:w-1/2 space-y-4">
+                    <div>
+                      <Label>Name</Label>
+                      <div className="mt-1 font-medium">{viewingAsset.name}</div>
+                    </div>
+                    
+                    <div>
+                      <Label>Type</Label>
+                      <div className="mt-1">
+                        <Badge variant="secondary">{viewingAsset.kind.toLowerCase()}</Badge>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label>Size</Label>
+                      <div className="mt-1 text-sm">
+                        {viewingAsset.size ? `${(viewingAsset.size / 1024 / 1024).toFixed(2)} MB` : 'N/A'}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label>Uploaded</Label>
+                      <div className="mt-1 text-sm">
+                        {new Date(viewingAsset.createdAt).toLocaleString()}
+                      </div>
+                    </div>
+                    
+                    {viewingAsset.campaign && (
+                      <div>
+                        <Label>Associated Campaign</Label>
+                        <div className="mt-1">
+                          <Badge>{viewingAsset.campaign.name}</Badge>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {viewingAsset.tags.length > 0 && (
+                      <div>
+                        <Label>Tags</Label>
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          {viewingAsset.tags.map((tag, index) => (
+                            <Badge key={index} variant="secondary">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <DialogFooter>
+                  <Button onClick={() => setIsViewModalOpen(false)}>
+                    Close
+                  </Button>
+                </DialogFooter>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Asset Modal */}
+        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Asset</DialogTitle>
+            </DialogHeader>
+            {editingAsset && (
+              <div className="space-y-6">
+                <div className="flex flex-col md:flex-row gap-6">
+                  <div className="md:w-1/2">
+                    <div className="aspect-square bg-muted rounded-lg overflow-hidden">
+                      {editingAsset.kind === 'IMAGE' ? (
+                        <img 
+                          src={editingAsset.url.startsWith('http') ? editingAsset.url : `${import.meta.env.VITE_API_BASE_URL || ''}${editingAsset.url}`} 
+                          alt={editingAsset.name} 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2NjYyIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1zaXplPSIxMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlPC90ZXh0Pjwvc3ZnPg==';
+                          }}
+                        />
+                      ) : (
+                        <div className={`w-full h-full flex items-center justify-center ${getAssetColor(editingAsset.kind)}`}>
+                          {React.createElement(getAssetIcon(editingAsset.kind), { className: "w-16 h-16" })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="md:w-1/2 space-y-4">
+                    <div>
+                      <Label htmlFor="asset-name">Name</Label>
+                      <Input
+                        id="asset-name"
+                        value={assetForm.name}
+                        onChange={(e) => handleFormChange('name', e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label>Type</Label>
+                      <div className="mt-1">
+                        <Badge variant="secondary">{editingAsset.kind.toLowerCase()}</Badge>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label>Size</Label>
+                      <div className="mt-1 text-sm">
+                        {editingAsset.size ? `${(editingAsset.size / 1024 / 1024).toFixed(2)} MB` : 'N/A'}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label>Uploaded</Label>
+                      <div className="mt-1 text-sm">
+                        {new Date(editingAsset.createdAt).toLocaleString()}
+                      </div>
+                    </div>
+                    
+                    {editingAsset.campaign && (
+                      <div>
+                        <Label>Associated Campaign</Label>
+                        <div className="mt-1">
+                          <Badge>{editingAsset.campaign.name}</Badge>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <Label>Tags</Label>
+                    <div className="mt-1 flex flex-wrap gap-2">
+                      {assetForm.tags.map((tag, index) => (
+                        <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                          {tag}
+                          <button 
+                            type="button" 
+                            onClick={() => handleRemoveTag(tag)}
+                            className="rounded-full hover:bg-muted-foreground/20 p-1"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Input
+                      value={assetForm.newTag}
+                      onChange={(e) => handleFormChange('newTag', e.target.value)}
+                      placeholder="Add a tag..."
+                      onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
+                    />
+                    <Button onClick={handleAddTag} variant="outline">
+                      <Tag className="w-4 h-4 mr-2" />
+                      Add
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <Label>Associate with Campaign</Label>
+                  <Select 
+                    value={assetForm.campaignId} 
+                    onValueChange={(value) => handleFormChange('campaignId', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a campaign" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None</SelectItem>
+                      {campaigns.map(campaign => (
+                        <SelectItem key={campaign.id} value={campaign.id}>
+                          {campaign.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveAsset}>
+                    Save Changes
+                  </Button>
+                </DialogFooter>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
+    </PageLayout>
+  );
+}
