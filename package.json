@@ -315,11 +315,11 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "node build.js",
+    "build": "node simple-build.js",
     "preview": "vite preview",
     "start": "vite preview --port ${PORT:-8080}",
     "serve": "vite preview --port ${PORT:-8080}",
-    "railway-start": "npm run build || echo 'Build may have already been done' && vite preview --port ${PORT:-8080}"
+    "railway-start": "npm run build || echo 'Build may have already been done' && npx vite preview --port ${PORT:-8080}"
   },
   "keywords": [],
   "author": "",
