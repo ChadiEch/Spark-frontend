@@ -13,11 +13,12 @@ RUN npm ci
 # Copy the rest of the application
 COPY . .
 
-# Build the application
-RUN npx vite build
+# Ensure node_modules/.bin is in PATH and build the application
+ENV PATH="/app/node_modules/.bin:${PATH}"
+RUN npm run build
 
 # Expose the port
 EXPOSE 8080
 
 # Start the application
-CMD ["npx", "vite", "preview", "--port", "8080"]
+CMD ["npm", "run", "serve"]
