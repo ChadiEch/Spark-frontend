@@ -1,8 +1,13 @@
 [build]
-builder = "DOCKERFILE"
+builder = "nixpacks"
 
 [deploy]
-startCommand = "nginx -g 'daemon off;'"
+startCommand = "npm run serve"
 
 [variables]
 NODE_VERSION = "18"
+NIXPACKS_NO_TSC = "1"
+
+[phases]
+install = "npm ci"
+build = "sh .nixpacks/build.sh"

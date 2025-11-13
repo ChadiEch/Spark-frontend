@@ -23,14 +23,6 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    sourcemap: false,
-    rollupOptions: {
-      external: []
-    }
-  },
-  esbuild: {
-    jsxFactory: 'React.createElement',
-    jsxFragment: 'React.Fragment',
-    tsconfigRaw: '{}'
+    sourcemap: false
   }
 })
