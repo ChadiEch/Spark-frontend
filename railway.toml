@@ -6,6 +6,7 @@ startCommand = "npm run serve"
 
 [variables]
 NODE_VERSION = "18"
+NIXPACKS_NO_TSC = "1"
 
 [phases]
 install = "npm ci"

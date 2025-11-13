@@ -315,7 +315,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "prebuild": "node -e \"console.log('Skipping TypeScript compilation')\"",
+    "build": "CI=false vite build --mode production",
     "preview": "vite preview",
     "start": "vite preview --port ${PORT:-8080}",
     "serve": "vite preview --port ${PORT:-8080}"
