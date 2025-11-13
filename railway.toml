@@ -1,13 +1,8 @@
 [build]
-builder = "nixpacks"
+builder = "DOCKERFILE"
 
 [deploy]
-startCommand = "npm run serve"
+startCommand = "npx vite preview --port ${PORT:-8080}"
 
 [variables]
 NODE_VERSION = "18"
-NIXPACKS_NO_TSC = "1"
-
-[phases]
-install = "npm ci"
-build = "npm run build"
