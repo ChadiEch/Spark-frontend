@@ -314,12 +314,12 @@
     "vite": "^7.2.2"
   },
   "scripts": {
-    "dev": "vite",
+    "dev": "npx vite",
     "prebuild": "node -e \"console.log('Skipping TypeScript compilation')\"",
-    "build": "CI=false vite build --mode production",
-    "preview": "vite preview",
-    "start": "vite preview --port ${PORT:-8080}",
-    "serve": "vite preview --port ${PORT:-8080}"
+    "build": "CI=false npx vite build --mode production",
+    "preview": "npx vite preview",
+    "start": "npx vite preview --port ${PORT:-8080}",
+    "serve": "npx vite preview --port ${PORT:-8080}"
   },
   "keywords": [],
   "author": "",
