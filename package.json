@@ -319,7 +319,7 @@
     "preview": "vite preview",
     "start": "vite preview --port ${PORT:-8080}",
     "serve": "vite preview --port ${PORT:-8080}",
-    "railway-start": "npm run build && (npx vite preview --port ${PORT:-8080} || echo 'Vite preview failed, check logs')"
+    "railway-start": "npm run build && node server.js"
   },
   "keywords": [],
   "author": "",
