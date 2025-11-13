@@ -28,6 +28,8 @@ export default defineConfig(async () => {
       rollupOptions: {
         external: []
       }
-    }
+    },
+    // Ensure assets are served with correct base path
+    base: './'
   };
 });

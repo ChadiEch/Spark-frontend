@@ -17,7 +17,11 @@ const mimeTypes = {
   '.jpg': 'image/jpg',
   '.gif': 'image/gif',
   '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon'
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.eot': 'application/vnd.ms-fontobject'
 };
 
 // Create server
@@ -44,6 +48,7 @@ const server = http.createServer((req, res) => {
   
   // Security check to prevent directory traversal
   if (!fullPath.startsWith(distPath)) {
+    console.log(`Forbidden access attempt: ${fullPath}`);
     res.writeHead(403, { 'Content-Type': 'text/plain' });
     res.end('Forbidden');
     return;
@@ -52,27 +57,34 @@ const server = http.createServer((req, res) => {
   // Get the file extension
   const ext = path.parse(fullPath).ext;
   
+  console.log(`Serving file: ${fullPath} with extension: ${ext}`);
+  
   // Read the file
   fs.readFile(fullPath, (err, data) => {
     if (err) {
+      console.log(`File not found: ${fullPath}, error: ${err.code}`);
       // If file not found, serve index.html (for client-side routing)
       if (err.code === 'ENOENT') {
         fs.readFile('./dist/index.html', (err2, data2) => {
           if (err2) {
+            console.log(`Error serving index.html: ${err2.message}`);
             res.writeHead(500, { 'Content-Type': 'text/plain' });
             res.end('Internal Server Error');
           } else {
+            console.log(`Serving index.html as fallback for: ${req.url}`);
             res.writeHead(200, { 'Content-Type': 'text/html' });
             res.end(data2);
           }
         });
       } else {
+        console.log(`Error reading file: ${err.message}`);
         res.writeHead(500, { 'Content-Type': 'text/plain' });
         res.end('Internal Server Error');
       }
     } else {
       // Set the content type
-      const mimeType = mimeTypes[ext] || 'text/plain';
+      const mimeType = mimeTypes[ext] || 'application/octet-stream';
+      console.log(`Serving ${fullPath} with MIME type: ${mimeType}`);
       res.writeHead(200, { 'Content-Type': mimeType });
       res.end(data);
     }
@@ -81,4 +93,23 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running at http://0.0.0.0:${PORT}/`);
+  console.log(`Serving files from ${path.resolve('./dist')}`);
+  
+  // List files in dist directory for debugging
+  fs.readdir('./dist', (err, files) => {
+    if (err) {
+      console.log('Error reading dist directory:', err.message);
+    } else {
+      console.log('Files in dist directory:', files);
+      files.forEach(file => {
+        if (fs.statSync(path.join('./dist', file)).isDirectory()) {
+          fs.readdir(path.join('./dist', file), (err, subFiles) => {
+            if (!err) {
+              console.log(`Files in dist/${file}:`, subFiles);
+            }
+          });
+        }
+      });
+    }
+  });
 });
