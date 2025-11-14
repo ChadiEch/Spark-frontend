@@ -71,7 +71,7 @@ export function Sidebar({ className, onClose }: SidebarProps) {
             <div className="flex items-center justify-center w-8 h-8 bg-gradient-primary rounded-lg">
               <Crown className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-lg text-sidebar-foreground hidden md:block">Winnerforce</span>
+            <span className="font-bold text-lg text-sidebar-foreground  md:block">Winnerforce</span>
           </div>
         )}
         <Button
@@ -102,7 +102,7 @@ export function Sidebar({ className, onClose }: SidebarProps) {
             >
               <Link to={item.href} onClick={handleNavigationClick}>
                 <Icon className="w-4 h-4 flex-shrink-0" />
-                {!isCollapsed && <span className="truncate hidden md:block">{item.label}</span>}
+                {!isCollapsed && <span className="truncate  md:block">{item.label}</span>}
               </Link>
             </Button>
           );
@@ -116,7 +116,7 @@ export function Sidebar({ className, onClose }: SidebarProps) {
             <span className="text-sm font-semibold text-white">{getUserInitials()}</span>
           </div>
           {!isCollapsed && user && (
-            <div className="flex-1 min-w-0 hidden md:block">
+            <div className="flex-1 min-w-0  md:block">
               <p className="text-sm font-medium text-sidebar-foreground truncate">{user.name}</p>
               <p className="text-xs text-sidebar-foreground/70 truncate capitalize">{user.role?.toLowerCase() || 'user'}</p>
             </div>
