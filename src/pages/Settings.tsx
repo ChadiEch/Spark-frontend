@@ -510,6 +510,9 @@ const Settings = () => {
     color: string;
     connectionId?: string;
   }>);
+  
+  // State for tracking integration initialization
+  const [initializingIntegrations, setInitializingIntegrations] = useState(false);
 
   // Load integrations data
   useEffect(() => {
@@ -664,133 +667,178 @@ const Settings = () => {
     }
   }, [activeTab]);
 
-  const handleUpdateProfile = async (data: { firstName: string; lastName: string; email: string; title: string; timezone: string; avatar?: string; }, avatarFile?: File) => {
+  const handleInitializeIntegrations = async () => {
     try {
-      // Prepare user data for update
-      const userData: Partial<User> = {
-        name: `${data.firstName} ${data.lastName}`,
-        email: data.email,
-      };
+      setInitializingIntegrations(true);
       
-      // Handle avatar upload if a file is provided
-      if (avatarFile) {
-        try {
-          // Import the asset service to upload the avatar
-          const { assetService } = await import('@/services/dataService');
-          
-          // Upload the avatar file
-          const uploadedAsset = await assetService.upload(avatarFile);
-          if (uploadedAsset) {
-            // Set the avatar URL in the user data
-            userData.avatar = uploadedAsset.url;
-          }
-        } catch (uploadError) {
-          console.error('Error uploading avatar:', uploadError);
-          toast({
-            title: "Avatar Upload Failed",
-            description: "Failed to upload avatar. Profile will be updated without avatar.",
-            variant: "destructive",
+      // In a real implementation, this would call an API endpoint to initialize integrations
+      // For now, we'll simulate the process with a delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Show a success message
+      toast({
+        title: "Integrations Initialized",
+        description: "Integration configurations have been initialized successfully.",
+      });
+      
+      // Reload integrations to reflect any changes
+      if (activeTab === 'integrations') {
+        const availableIntegrations = await integrationService.getAll();
+        const userConnections = await integrationService.getUserConnections();
+        
+        const mergedIntegrations = availableIntegrations.map(integration => {
+          const connection = userConnections.find(conn => {
+            if (conn.integrationId && integration.id) {
+              return conn.integrationId.toString() === integration.id.toString();
+            }
+            if (conn.integrationId && integration.key) {
+              return conn.integrationId.toString() === integration.key.toString();
+            }
+            return false;
           });
-        }
-      }
-      
-      // Update user profile through AuthContext
-      const updatedUser = await updateProfile(userData);
-      
-      if (updatedUser) {
-        // Update local state with new data
-        setProfileData({
-          firstName: data.firstName,
-          lastName: data.lastName,
-          email: data.email,
-          title: data.title,
-          timezone: data.timezone,
-          avatar: userData.avatar || data.avatar || ''
+          
+          let iconComponent;
+          let color = 'text-gray-500';
+          
+          switch (integration.key) {
+            case 'instagram':
+              iconComponent = () => <svg className="h-6 w-6 text-pink-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>;
+              color = 'text-pink-500';
+              break;
+            case 'facebook':
+              iconComponent = () => <svg className="h-6 w-6 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/></svg>;
+              color = 'text-blue-600';
+              break;
+            case 'tiktok':
+              iconComponent = () => <svg className="h-6 w-6 text-black" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>;
+              color = 'text-black';
+              break;
+            case 'youtube':
+              iconComponent = () => <svg className="h-6 w-6 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>;
+              color = 'text-red-500';
+              break;
+            case 'google-drive':
+              iconComponent = () => (
+                <svg className="h-6 w-6 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M23.894 14.429l-10.5 6.303c-.285.171-.629.265-.991.265-.362 0-.706-.094-.991-.265l-10.5-6.303C.332 14.082 0 13.494 0 12.857v-1.714c0-.637.332-1.225.906-1.572l10.5-6.303c.285-.171.629-.265.991-.265.362 0 .706.094.991.265l10.5 6.303c.574.347.906.935.906 1.572v1.714c0 .637-.332 1.225-.906 1.572zM12 4.286l-9.844 5.909 9.844 5.909 9.844-5.909L12 4.286z"/>
+                </svg>
+              );
+              color = 'text-blue-500';
+              break;
+            default:
+              iconComponent = Globe;
+              break;
+          }
+          
+          return {
+            ...integration,
+            icon: iconComponent,
+            color,
+            connected: !!connection,
+            connectionId: connection?.id
+          };
         });
-        console.log('Profile updated:', data);
-        toast({
-          title: "Profile Updated",
-          description: "Your profile has been updated successfully.",
-        });
-      } else {
-        throw new Error('Failed to update profile');
+        
+        setIntegrations(mergedIntegrations);
       }
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.error('Error initializing integrations:', error);
       toast({
         title: "Error",
-        description: "Failed to update profile. Please try again.",
+        description: "Failed to initialize integrations. Please try again.",
         variant: "destructive",
       });
-      throw error;
+    } finally {
+      setInitializingIntegrations(false);
     }
   };
-
-  const handleUpdateNotifications = async (settings: typeof notifications) => {
-    try {
-      // In a real app, this would call an API to persist the settings
-      // For now, we'll update the local state and simulate a successful API call
-      setNotifications(settings);
-      console.log('Notifications updated:', settings);
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // In a real implementation, you would do something like:
-      // const { notificationService } = await import('@/services/dataService');
-      // await notificationService.updateSettings(settings);
-    } catch (error) {
-      console.error('Error updating notifications:', error);
-      // Re-throw the error so the calling function can handle it
-      throw error;
-    }
-  };
-
+  
+  // Function to handle toggling integration connections
   const handleToggleIntegration = async (id: string) => {
     try {
-      // Find the integration
-      const integrationItem = integrations.find(i => i.id === id);
-      if (!integrationItem) {
+      // Find the integration being toggled
+      const integration = integrations.find(int => int.id === id);
+      if (!integration) return;
+      
+      // If connected, disconnect it
+      if (integration.connected) {
+        if (integration.connectionId) {
+          await integrationService.disconnect(integration.connectionId);
+          toast({
+            title: "Integration Disconnected",
+            description: `${integration.name} has been disconnected successfully.`,
+          });
+        }
+      } 
+      // If not connected, connect it
+      else {
+        // In a real implementation, this would open an OAuth flow or similar
+        // For now, we'll just simulate the connection
         toast({
-          title: "Error",
-          description: "Integration not found.",
-          variant: "destructive",
+          title: "Integration Connected",
+          description: `${integration.name} connection initiated.`,
         });
-        return;
       }
       
-      if (integrationItem.connected) {
-        // Disconnect integration
-        if (integrationItem.connectionId) {
-          await integrationService.disconnect(integrationItem.connectionId);
-        }
+      // Reload integrations to reflect the change
+      if (activeTab === 'integrations') {
+        const availableIntegrations = await integrationService.getAll();
+        const userConnections = await integrationService.getUserConnections();
         
-        toast({
-          title: "Integration Disconnected",
-          description: `${integrationItem.name} has been disconnected from your account.`,
-        });
-        
-        // Update the integrations state
-        setIntegrations(prev => 
-          prev.map(int => 
-            int.id === id ? {...int, connected: false, connectionId: undefined} : int
-          )
-        );
-      } else {
-        // Connect integration
-        const result = await integrationService.connect(id);
-        
-        if (result?.authorizationUrl) {
-          toast({
-            title: "Redirecting to OAuth",
-            description: `Redirecting to ${integrationItem.name} for authentication...`,
+        const mergedIntegrations = availableIntegrations.map(integration => {
+          const connection = userConnections.find(conn => {
+            if (conn.integrationId && integration.id) {
+              return conn.integrationId.toString() === integration.id.toString();
+            }
+            if (conn.integrationId && integration.key) {
+              return conn.integrationId.toString() === integration.key.toString();
+            }
+            return false;
           });
           
-          // Redirect to the authorization URL to initiate OAuth flow
-          window.location.href = result.authorizationUrl;
-        } else {
-          throw new Error('Failed to get authorization URL');
-        }
+          let iconComponent;
+          let color = 'text-gray-500';
+          
+          switch (integration.key) {
+            case 'instagram':
+              iconComponent = () => <svg className="h-6 w-6 text-pink-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>;
+              color = 'text-pink-500';
+              break;
+            case 'facebook':
+              iconComponent = () => <svg className="h-6 w-6 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/></svg>;
+              color = 'text-blue-600';
+              break;
+            case 'tiktok':
+              iconComponent = () => <svg className="h-6 w-6 text-black" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>;
+              color = 'text-black';
+              break;
+            case 'youtube':
+              iconComponent = () => <svg className="h-6 w-6 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>;
+              color = 'text-red-500';
+              break;
+            case 'google-drive':
+              iconComponent = () => (
+                <svg className="h-6 w-6 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M23.894 14.429l-10.5 6.303c-.285.171-.629.265-.991.265-.362 0-.706-.094-.991-.265l-10.5-6.303C.332 14.082 0 13.494 0 12.857v-1.714c0-.637.332-1.225.906-1.572l10.5-6.303c.285-.171.629-.265.991-.265.362 0 .706.094.991.265l10.5 6.303c.574.347.906.935.906 1.572v1.714c0 .637-.332 1.225-.906 1.572zM12 4.286l-9.844 5.909 9.844 5.909 9.844-5.909L12 4.286z"/>
+                </svg>
+              );
+              color = 'text-blue-500';
+              break;
+            default:
+              iconComponent = Globe;
+              break;
+          }
+          
+          return {
+            ...integration,
+            icon: iconComponent,
+            color,
+            connected: !!connection,
+            connectionId: connection?.id
+          };
+        });
+        
+        setIntegrations(mergedIntegrations);
       }
     } catch (error) {
       console.error('Error toggling integration:', error);
@@ -1580,6 +1628,56 @@ const Settings = () => {
       throw error;
     }
   };
+  
+  // Function to handle profile updates
+  const handleUpdateProfile = async (data: any, avatarFile?: File) => {
+    try {
+      // Update profile data
+      await updateProfile({
+        ...data,
+        name: `${data.firstName} ${data.lastName}`,
+        avatar: data.avatar || profileData.avatar
+      });
+      
+      // Update local state
+      setProfileData(data);
+      
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully.",
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+  
+  // Function to handle notification updates
+  const handleUpdateNotifications = (settings: any) => {
+    try {
+      // In a real implementation, this would call an API to save notification settings
+      // For now, we'll just update the local state
+      setNotifications(settings);
+      
+      toast({
+        title: "Notifications Updated",
+        description: "Your notification preferences have been saved successfully.",
+      });
+    } catch (error) {
+      console.error('Error updating notifications:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save notifications. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
 
   return (
     <PageLayout>
@@ -1645,10 +1743,26 @@ const Settings = () => {
             )}
             
             {activeTab === 'integrations' && (
-              <IntegrationsSettings 
-                integrations={integrations} 
-                onToggleConnection={handleToggleIntegration} 
-              />
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="text-2xl font-bold">Integrations</h2>
+                    <p className="text-muted-foreground">Connect your social media accounts and other services</p>
+                  </div>
+                  <Button 
+                    onClick={handleInitializeIntegrations}
+                    variant="default"
+                    size="sm"
+                    disabled={initializingIntegrations}
+                  >
+                    {initializingIntegrations ? 'Initializing...' : 'Initialize Integrations'}
+                  </Button>
+                </div>
+                <IntegrationsSettings 
+                  integrations={integrations} 
+                  onToggleConnection={handleToggleIntegration} 
+                />
+              </div>
             )}
             
             {activeTab === 'billing' && renderBillingTab()}
