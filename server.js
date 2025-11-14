@@ -112,4 +112,18 @@ server.listen(PORT, '0.0.0.0', () => {
       });
     }
   });
+  
+  // Check if we have the essential files
+  if (fs.existsSync('./dist/index.html')) {
+    console.log('✓ Found index.html');
+  } else {
+    console.log('✗ Missing index.html');
+  }
+  
+  if (fs.existsSync('./dist/assets')) {
+    const assets = fs.readdirSync('./dist/assets');
+    console.log(`✓ Found assets directory with ${assets.length} files`);
+  } else {
+    console.log('✗ Missing assets directory');
+  }
 });
