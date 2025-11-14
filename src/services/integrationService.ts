@@ -53,7 +53,11 @@ export const integrationAPI = {
   
   // Get integration health metrics
   getHealthMetrics: () => 
-    retryRequestWithFeedback(() => api.get<APIResponse<any>>('/integrations/metrics'), 3, 1000, 'fetching integration health metrics')
+    retryRequestWithFeedback(() => api.get<APIResponse<any>>('/integrations/metrics'), 3, 1000, 'fetching integration health metrics'),
+  
+  // Initialize integrations collection
+  initializeIntegrations: () => 
+    retryRequestWithFeedback(() => api.post<APIResponse<any>>('/integrations/initialize'), 3, 1000, 'initializing integrations collection')
 };
 
 // Simple integration service for local development
@@ -333,6 +337,17 @@ export const integrationService = {
       return response.data.data;
     } catch (error) {
       console.error('Failed to fetch health metrics via API:', error);
+      throw error;
+    }
+  },
+  
+  initializeIntegrations: async (): Promise<any> => {
+    try {
+      // Use the real API
+      const response = await integrationAPI.initializeIntegrations();
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to initialize integrations via API:', error);
       throw error;
     }
   }

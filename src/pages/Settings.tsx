@@ -671,9 +671,8 @@ const Settings = () => {
     try {
       setInitializingIntegrations(true);
       
-      // In a real implementation, this would call an API endpoint to initialize integrations
-      // For now, we'll simulate the process with a delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call the API endpoint to initialize integrations
+      await integrationService.initializeIntegrations();
       
       // Show a success message
       toast({
