@@ -236,7 +236,9 @@ export const integrationService = {
     } catch (error) {
       console.warn('Failed to fetch integrations from API, using local data:', error);
       // Fallback to simple service
-      return await simpleIntegrationService.getAll();
+      const localData = await simpleIntegrationService.getAll();
+      console.log('Using local integration data:', localData);
+      return localData;
     }
   },
   
@@ -248,7 +250,9 @@ export const integrationService = {
     } catch (error) {
       console.warn('Failed to fetch integration connections from API, using local data:', error);
       // Fallback to simple service
-      return await simpleIntegrationService.getUserConnections();
+      const localData = await simpleIntegrationService.getUserConnections();
+      console.log('Using local connection data:', localData);
+      return localData;
     }
   },
   

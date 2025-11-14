@@ -510,12 +510,16 @@ const Settings = () => {
         // Load user's connected integrations
         const userConnections = await integrationService.getUserConnections();
         
+        // Log the data for debugging
+        console.log('Available integrations:', availableIntegrations);
+        console.log('User connections:', userConnections);
+        
         // Merge the data to show which integrations are connected
         const mergedIntegrations = availableIntegrations.map(integration => {
           // Find connection by matching integrationId with integration._id
           const connection = userConnections.find(conn => 
             conn.integrationId === integration.id || 
-            conn.integrationId === integration.id
+            conn.integrationId === integration._id
           );
           
           // Map to the component structure
