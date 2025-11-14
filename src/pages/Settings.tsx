@@ -534,10 +534,19 @@ const Settings = () => {
         
         // Merge the data to show which integrations are connected
         const mergedIntegrations = availableIntegrations.map(integration => {
-          // Find connection by matching connection.integrationId with integration.id
-          const connection = userConnections.find(conn => 
-            conn.integrationId?.toString() === integration.id?.toString()
-          );
+          // Find connection by matching connection.integrationId with integration.id or integration.key
+          // Handle both string and ObjectId cases
+          const connection = userConnections.find(conn => {
+            // Check if integrationId matches integration.id
+            if (conn.integrationId && integration.id) {
+              return conn.integrationId.toString() === integration.id.toString();
+            }
+            // Check if integrationId matches integration.key
+            if (conn.integrationId && integration.key) {
+              return conn.integrationId.toString() === integration.key.toString();
+            }
+            return false;
+          });
           
           // Log the matching for debugging
           console.log(`Matching integration ${integration.id} with connection:`, connection);

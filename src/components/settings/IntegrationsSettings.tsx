@@ -27,21 +27,8 @@ interface IntegrationsSettingsProps {
 }
 
 export function IntegrationsSettings({ integrations, onToggleConnection }: IntegrationsSettingsProps) {
-  // Show a message if no integrations are available
-  if (!integrations || integrations.length === 0) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold">Integrations</h2>
-          <p className="text-muted-foreground">Connect your social media accounts and other services</p>
-        </div>
-        <div className="text-center py-10">
-          <p className="text-muted-foreground">No integrations available at the moment.</p>
-          <p className="text-sm text-muted-foreground mt-2">Please check back later or contact support.</p>
-        </div>
-      </div>
-    );
-  }
+  // Always render the integrations, even if the array is empty
+  // This ensures the page doesn't hide when there are no connections
 
   return (
     <div className="space-y-6">
@@ -50,51 +37,58 @@ export function IntegrationsSettings({ integrations, onToggleConnection }: Integ
         <p className="text-muted-foreground">Connect your social media accounts and other services</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {integrations.map((integration) => {
-          const IconComponent = integration.icon;
-          return (
-            <Card key={integration.id} className="p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3">
-                  <div className={`p-2 rounded-lg ${integration.connected ? 'bg-primary/10' : 'bg-muted'}`}>
-                    <IconComponent className={`h-6 w-6 ${integration.color}`} />
+      {(!integrations || integrations.length === 0) ? (
+        <div className="text-center py-10">
+          <p className="text-muted-foreground">No integrations available at the moment.</p>
+          <p className="text-sm text-muted-foreground mt-2">Please check back later or contact support.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {integrations.map((integration) => {
+            const IconComponent = integration.icon;
+            return (
+              <Card key={integration.id} className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className={`p-2 rounded-lg ${integration.connected ? 'bg-primary/10' : 'bg-muted'}`}>
+                      <IconComponent className={`h-6 w-6 ${integration.color}`} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">{integration.name}</h3>
+                      <p className="text-sm text-muted-foreground">{integration.description}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold">{integration.name}</h3>
-                    <p className="text-sm text-muted-foreground">{integration.description}</p>
-                  </div>
+                  <Badge 
+                    variant={integration.connected ? "default" : "secondary"}
+                    className={integration.connected ? "bg-green-500" : ""}
+                  >
+                    {integration.connected ? (
+                      <span className="flex items-center">
+                        <Check className="h-3 w-3 mr-1" />
+                        Connected
+                      </span>
+                    ) : (
+                      <span className="flex items-center">
+                        <X className="h-3 w-3 mr-1" />
+                        Not Connected
+                      </span>
+                    )}
+                  </Badge>
                 </div>
-                <Badge 
-                  variant={integration.connected ? "default" : "secondary"}
-                  className={integration.connected ? "bg-green-500" : ""}
-                >
-                  {integration.connected ? (
-                    <span className="flex items-center">
-                      <Check className="h-3 w-3 mr-1" />
-                      Connected
-                    </span>
-                  ) : (
-                    <span className="flex items-center">
-                      <X className="h-3 w-3 mr-1" />
-                      Not Connected
-                    </span>
-                  )}
-                </Badge>
-              </div>
-              <div className="flex justify-end mt-4">
-                <Button 
-                  variant={integration.connected ? "outline" : "default"}
-                  size="sm"
-                  onClick={() => onToggleConnection(integration.id)}
-                >
-                  {integration.connected ? "Disconnect" : "Connect"}
-                </Button>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+                <div className="flex justify-end mt-4">
+                  <Button 
+                    variant={integration.connected ? "outline" : "default"}
+                    size="sm"
+                    onClick={() => onToggleConnection(integration.id)}
+                  >
+                    {integration.connected ? "Disconnect" : "Connect"}
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
