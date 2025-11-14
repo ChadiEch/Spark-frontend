@@ -57,7 +57,7 @@ const Settings = () => {
     email: '',
     title: '',
     timezone: '',
-    avatar: '',
+    avatar: undefined as string | undefined,
   });
   const { user: currentUser, updateProfile, isLoading } = useAuth();
   const [notifications, setNotifications] = useState({
@@ -79,7 +79,18 @@ const Settings = () => {
   const [billingLoading, setBillingLoading] = useState(true);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   // Add security state
-  const [securityInfo, setSecurityInfo] = useState<any>(null);
+  const [securityInfo, setSecurityInfo] = useState<{
+    twoFactorAuth?: {
+      enabled: boolean;
+    };
+    sessions?: Array<{
+      id: string;
+      userAgent?: string;
+      location?: string;
+      lastActive?: string;
+      current?: boolean;
+    }>;
+  } | null>(null);
   const [securityLoading, setSecurityLoading] = useState(true);
   // Add state for modals
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
@@ -516,10 +527,9 @@ const Settings = () => {
         
         // Merge the data to show which integrations are connected
         const mergedIntegrations = availableIntegrations.map(integration => {
-          // Find connection by matching integrationId with integration._id
+          // Find connection by matching connection.integrationId with integration.id
           const connection = userConnections.find(conn => 
-            conn.integrationId === integration.id || 
-            conn.integrationId === integration._id
+            conn.integrationId?.toString() === integration.id?.toString()
           );
           
           // Map to the component structure
@@ -581,7 +591,7 @@ const Settings = () => {
     }
   }, [activeTab]);
 
-  const handleUpdateProfile = async (data: typeof profileData, avatarFile?: File) => {
+  const handleUpdateProfile = async (data: { firstName: string; lastName: string; email: string; title: string; timezone: string; avatar?: string; }, avatarFile?: File) => {
     try {
       // Prepare user data for update
       const userData: Partial<User> = {
@@ -1347,6 +1357,17 @@ const Settings = () => {
                         ...prev?.twoFactorAuth,
                         enabled
                       }
+                    } as {
+                      twoFactorAuth?: {
+                        enabled: boolean;
+                      };
+                      sessions?: Array<{
+                        id: string;
+                        userAgent?: string;
+                        location?: string;
+                        lastActive?: string;
+                        current?: boolean;
+                      }>;
                     }));
                     
                     toast({
@@ -1394,7 +1415,7 @@ const Settings = () => {
                             await securityService.revokeSession(session.id);
                             setSecurityInfo(prev => ({
                               ...prev,
-                              sessions: prev?.sessions?.filter(s => s.id !== session.id)
+                              sessions: prev?.sessions?.filter((s: any) => s.id !== session.id)
                             }));
                             toast({
                               title: "Success",
@@ -1426,7 +1447,7 @@ const Settings = () => {
                           await securityService.revokeAllSessions();
                           setSecurityInfo(prev => ({
                             ...prev,
-                            sessions: prev?.sessions?.filter(s => s.current)
+                            sessions: prev?.sessions?.filter((s: any) => s.current)
                           }));
                           toast({
                             title: "Success",
