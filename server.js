@@ -30,39 +30,35 @@ const server = http.createServer((req, res) => {
   
   // Parse the URL
   const parsedUrl = url.parse(req.url);
-  let pathname = `.${parsedUrl.pathname}`;
+  let pathname = parsedUrl.pathname;
   
   // Default to index.html for root path
-  if (pathname === './') {
-    pathname = './dist/index.html';
+  if (pathname === '/') {
+    pathname = '/index.html';
   }
   
-  // Serve files from dist directory
-  if (!pathname.startsWith('./dist')) {
-    pathname = `./dist${pathname}`;
-  }
-  
-  // Resolve the full path
-  const fullPath = path.resolve(pathname);
+  // Construct the full path
+  const fullPath = path.join('./dist', pathname);
+  const resolvedPath = path.resolve(fullPath);
   const distPath = path.resolve('./dist');
   
   // Security check to prevent directory traversal
-  if (!fullPath.startsWith(distPath)) {
-    console.log(`Forbidden access attempt: ${fullPath}`);
+  if (!resolvedPath.startsWith(distPath)) {
+    console.log(`Forbidden access attempt: ${resolvedPath}`);
     res.writeHead(403, { 'Content-Type': 'text/plain' });
     res.end('Forbidden');
     return;
   }
   
   // Get the file extension
-  const ext = path.parse(fullPath).ext;
+  const ext = path.parse(resolvedPath).ext;
   
-  console.log(`Serving file: ${fullPath} with extension: ${ext}`);
+  console.log(`Serving file: ${resolvedPath} with extension: ${ext}`);
   
   // Read the file
-  fs.readFile(fullPath, (err, data) => {
+  fs.readFile(resolvedPath, (err, data) => {
     if (err) {
-      console.log(`File not found: ${fullPath}, error: ${err.code}`);
+      console.log(`File not found: ${resolvedPath}, error: ${err.code}`);
       // If file not found, serve index.html (for client-side routing)
       if (err.code === 'ENOENT') {
         fs.readFile('./dist/index.html', (err2, data2) => {
@@ -84,7 +80,7 @@ const server = http.createServer((req, res) => {
     } else {
       // Set the content type
       const mimeType = mimeTypes[ext] || 'application/octet-stream';
-      console.log(`Serving ${fullPath} with MIME type: ${mimeType}`);
+      console.log(`Serving ${resolvedPath} with MIME type: ${mimeType}`);
       res.writeHead(200, { 'Content-Type': mimeType });
       res.end(data);
     }
