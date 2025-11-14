@@ -27,6 +27,22 @@ interface IntegrationsSettingsProps {
 }
 
 export function IntegrationsSettings({ integrations, onToggleConnection }: IntegrationsSettingsProps) {
+  // Show a message if no integrations are available
+  if (!integrations || integrations.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold">Integrations</h2>
+          <p className="text-muted-foreground">Connect your social media accounts and other services</p>
+        </div>
+        <div className="text-center py-10">
+          <p className="text-muted-foreground">No integrations available at the moment.</p>
+          <p className="text-sm text-muted-foreground mt-2">Please check back later or contact support.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>

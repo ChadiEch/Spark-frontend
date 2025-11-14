@@ -231,8 +231,16 @@ export const integrationService = {
   getAll: async (): Promise<Integration[]> => {
     try {
       // Try to use the real API
+      console.log('Fetching integrations from API...');
       const response = await integrationAPI.getAll();
-      return response.data.data;
+      console.log('API response:', response);
+      
+      // Check if response has data
+      if (response && response.data && response.data.data) {
+        return response.data.data;
+      } else {
+        throw new Error('Invalid API response format');
+      }
     } catch (error) {
       console.warn('Failed to fetch integrations from API, using local data:', error);
       // Fallback to simple service
@@ -245,8 +253,16 @@ export const integrationService = {
   getUserConnections: async (): Promise<IntegrationConnection[]> => {
     try {
       // Try to use the real API
+      console.log('Fetching user connections from API...');
       const response = await integrationAPI.getUserConnections();
-      return response.data.data;
+      console.log('API response:', response);
+      
+      // Check if response has data
+      if (response && response.data && response.data.data) {
+        return response.data.data;
+      } else {
+        throw new Error('Invalid API response format');
+      }
     } catch (error) {
       console.warn('Failed to fetch integration connections from API, using local data:', error);
       // Fallback to simple service
