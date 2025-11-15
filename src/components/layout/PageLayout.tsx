@@ -6,6 +6,7 @@ import GlobalSearch from '@/components/GlobalSearch';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from '@/components/ui/use-toast';
 
 interface PageLayoutProps {
   children: React.ReactNode;
@@ -14,6 +15,42 @@ interface PageLayoutProps {
 export function PageLayout({ children }: PageLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [showInitButton, setShowInitButton] = useState(true);
+
+  // Temporary function to initialize integrations
+  const handleInitializeIntegrations = async () => {
+    try {
+      const response = await fetch('/api/integrations/initialize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast({
+          title: 'Success',
+          description: data.message || 'Integrations initialized successfully',
+        });
+        // Hide the button after successful initialization
+        setShowInitButton(false);
+      } else {
+        toast({
+          title: 'Error',
+          description: data.message || 'Failed to initialize integrations',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: 'Failed to initialize integrations: ' + error.message,
+        variant: 'destructive',
+      });
+    }
+  };
 
   useEffect(() => {
     const checkIfMobile = () => {
@@ -108,6 +145,18 @@ export function PageLayout({ children }: PageLayoutProps) {
             {children}
           </div>
         </main>
+        
+        {/* Temporary initialization button - can be removed after use */}
+        {showInitButton && (
+          <div className="fixed bottom-4 right-4 z-50">
+            <button
+              onClick={handleInitializeIntegrations}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg"
+            >
+              Initialize Integrations
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
