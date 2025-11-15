@@ -146,6 +146,17 @@ const App = () => {
                 <Toaster />
                 <Sonner />
                 <BrowserRouter>
+                  {/* Temporary initialization button - can be removed after use */}
+                  {showInitButton && (
+                    <div className="fixed top-4 right-4 z-50">
+                      <button
+                        onClick={handleInitializeIntegrations}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow-lg"
+                      >
+                        Initialize Integrations
+                      </button>
+                    </div>
+                  )}
                   <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
@@ -193,18 +204,18 @@ const App = () => {
             <TooltipProvider>
               <Toaster />
               <Sonner />
-              {/* Temporary initialization button - can be removed after use */}
-              {showInitButton && (
-                <div className="fixed top-4 right-4 z-50">
-                  <button
-                    onClick={handleInitializeIntegrations}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow-lg"
-                  >
-                    Initialize Integrations
-                  </button>
-                </div>
-              )}
               <BrowserRouter>
+                {/* Temporary initialization button - can be removed after use */}
+                {showInitButton && (
+                  <div className="fixed top-4 right-4 z-50">
+                    <button
+                      onClick={handleInitializeIntegrations}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow-lg"
+                    >
+                      Initialize Integrations
+                    </button>
+                  </div>
+                )}
                 <Routes>
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
