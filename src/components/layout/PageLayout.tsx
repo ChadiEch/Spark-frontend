@@ -16,11 +16,27 @@ export function PageLayout({ children }: PageLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [showInitButton, setShowInitButton] = useState(true);
+  
+  // Force show button in development and on Railway for testing
+  useEffect(() => {
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const isRailway = window.location.hostname.includes('railway');
+    
+    if (isDevelopment || isRailway) {
+      setShowInitButton(true);
+    }
+  }, []);
 
   // Temporary function to initialize integrations
   const handleInitializeIntegrations = async () => {
     try {
-      const response = await fetch('/api/integrations/initialize', {
+      // Use full URL on Railway to ensure proper routing
+      const isRailway = window.location.hostname.includes('railway');
+      const apiUrl = isRailway 
+        ? `${window.location.origin}/api/integrations/initialize`
+        : '/api/integrations/initialize';
+        
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,7 +87,13 @@ export function PageLayout({ children }: PageLayoutProps) {
   useEffect(() => {
     const autoInitialize = async () => {
       try {
-        const response = await fetch('/api/integrations/initialize', {
+        // Use full URL on Railway to ensure proper routing
+        const isRailway = window.location.hostname.includes('railway');
+        const apiUrl = isRailway 
+          ? `${window.location.origin}/api/integrations/initialize`
+          : '/api/integrations/initialize';
+          
+        const response = await fetch(apiUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -81,16 +103,26 @@ export function PageLayout({ children }: PageLayoutProps) {
         if (response.ok) {
           const data = await response.json();
           console.log('Integrations auto-initialized:', data.message);
-          // Hide the button after successful initialization
-          setShowInitButton(false);
+          console.log('Success response:', data);
+          // Keep the button visible for testing
+          // setShowInitButton(false);
         } else {
           // If initialization fails, show the button so user can try manually
+          const errorText = await response.text();
           console.log('Auto-initialization failed, showing manual button');
-          setShowInitButton(true);
+          console.log('Response status:', response.status);
+          console.log('Response text:', errorText);
+          // setShowInitButton(true);
         }
-      } catch (error) {
+      } catch (error: any) {
         // If initialization fails, show the button so user can try manually
         console.log('Auto-initialization error, showing manual button:', error);
+        console.log('Error details:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        });
+        // Always show button in case of error
         setShowInitButton(true);
       }
     };
@@ -181,16 +213,29 @@ export function PageLayout({ children }: PageLayoutProps) {
         </main>
         
         {/* Temporary initialization button - can be removed after use */}
-        {showInitButton && (
-          <div className="fixed bottom-4 right-4 z-50">
+        <div className="fixed bottom-4 right-4 z-50">
+          {showInitButton && (
             <button
               onClick={handleInitializeIntegrations}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg"
             >
               Initialize Integrations (Click if auto-init failed)
             </button>
+          )}
+          {/* Debug indicator - always visible to check if component is rendered */}
+          <div className="text-xs text-gray-500 mt-1">
+            Env: {process.env.NODE_ENV || 'unknown'} | 
+            Host: {window.location.hostname} | 
+            API URL: {window.location.hostname.includes('railway') ? `${window.location.origin}/api/integrations/initialize` : '/api/integrations/initialize'}
           </div>
-        )}
+          {/* Test button to verify component rendering */}
+          <button 
+            onClick={() => console.log('Test button clicked - component is rendering')}
+            className="mt-2 text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 px-2 rounded"
+          >
+            Test Component Render
+          </button>
+        </div>
       </div>
     </div>
   );
