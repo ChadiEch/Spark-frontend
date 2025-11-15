@@ -98,6 +98,8 @@ const App = () => {
           ? `${window.location.origin}/api/integrations/initialize`
           : '/api/integrations/initialize';
           
+        console.log('Auto-initializing - Making request to:', apiUrl);
+          
         const response = await fetch(apiUrl, {
           method: 'POST',
           headers: {
@@ -105,16 +107,25 @@ const App = () => {
           },
         });
 
+        console.log('Auto-initialize response status:', response.status);
+        console.log('Auto-initialize response headers:', [...response.headers.entries()]);
+        
+        const responseText = await response.text();
+        console.log('Auto-initialize response text:', responseText);
+        
         if (response.ok) {
-          const data = await response.json();
-          console.log('Integrations auto-initialized:', data.message);
-          // Hide button after success only if not on Railway (for debugging)
-          if (!isRailway) {
-            // setShowInitButton(false);
+          try {
+            const data = responseText ? JSON.parse(responseText) : {};
+            console.log('Integrations auto-initialized:', data.message);
+            // Hide button after success only if not on Railway (for debugging)
+            if (!isRailway) {
+              // setShowInitButton(false);
+            }
+          } catch (jsonError) {
+            console.log('Auto-initialize JSON parsing error:', jsonError);
           }
         } else {
-          const errorText = await response.text();
-          console.log('Auto-initialization failed:', response.status, errorText);
+          console.log('Auto-initialization failed:', response.status, responseText);
           // Keep button visible for manual retry
           setShowInitButton(true);
         }
@@ -190,11 +201,13 @@ const App = () => {
   const handleInitializeIntegrations = async () => {
     try {
       // Use full URL on Railway to ensure proper routing
-      const isRailway = window.location.hostname.includes('railway');
+      const isRailway = window.location.hostname.includes('railway.app');
       const apiUrl = isRailway 
         ? `${window.location.origin}/api/integrations/initialize`
         : '/api/integrations/initialize';
         
+      console.log('Making request to:', apiUrl);
+      
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -202,22 +215,33 @@ const App = () => {
         },
       });
 
-      const data = await response.json();
+      console.log('Response status:', response.status);
+      console.log('Response headers:', [...response.headers.entries()]);
+      
+      const responseText = await response.text();
+      console.log('Response text:', responseText);
       
       if (response.ok) {
-        toast({
-          title: 'Success',
-          description: data.message || 'Integrations initialized successfully',
-        });
-        console.log('Integrations initialized:', data);
+        try {
+          const data = responseText ? JSON.parse(responseText) : {};
+          toast({
+            title: 'Success',
+            description: data.message || 'Integrations initialized successfully',
+          });
+          console.log('Integrations initialized:', data);
+        } catch (jsonError) {
+          console.log('JSON parsing error:', jsonError);
+          toast({
+            title: 'Success',
+            description: 'Integrations initialized successfully',
+          });
+        }
         // Hide the button after successful initialization
         // setShowInitButton(false);
       } else {
-        const errorText = await response.text();
-        console.log('Initialization failed:', response.status, errorText);
         toast({
           title: 'Error',
-          description: `Failed to initialize: ${response.status} - ${errorText}`,
+          description: `Failed to initialize: ${response.status} - ${responseText.substring(0, 100)}`,
           variant: 'destructive',
         });
       }

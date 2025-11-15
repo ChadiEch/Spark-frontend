@@ -20,9 +20,17 @@ export function PageLayout({ children }: PageLayoutProps) {
   // Force show button in development and on Railway for testing
   useEffect(() => {
     const isDevelopment = process.env.NODE_ENV === 'development';
-    const isRailway = window.location.hostname.includes('railway');
+    const isRailway = window.location.hostname.includes('railway.app');
     
     if (isDevelopment || isRailway) {
+      setShowInitButton(true);
+    }
+  }, []);
+  
+  // Also check for Railway in the auto-initialize effect
+  useEffect(() => {
+    const isRailway = window.location.hostname.includes('railway.app');
+    if (isRailway) {
       setShowInitButton(true);
     }
   }, []);
@@ -31,11 +39,13 @@ export function PageLayout({ children }: PageLayoutProps) {
   const handleInitializeIntegrations = async () => {
     try {
       // Use full URL on Railway to ensure proper routing
-      const isRailway = window.location.hostname.includes('railway');
+      const isRailway = window.location.hostname.includes('railway.app');
       const apiUrl = isRailway 
         ? `${window.location.origin}/api/integrations/initialize`
         : '/api/integrations/initialize';
         
+      console.log('Making request to:', apiUrl);
+      
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -43,23 +53,38 @@ export function PageLayout({ children }: PageLayoutProps) {
         },
       });
 
-      const data = await response.json();
+      console.log('Response status:', response.status);
+      console.log('Response headers:', [...response.headers.entries()]);
+      
+      const responseText = await response.text();
+      console.log('Response text:', responseText);
       
       if (response.ok) {
-        toast({
-          title: 'Success',
-          description: data.message || 'Integrations initialized successfully',
-        });
+        try {
+          const data = responseText ? JSON.parse(responseText) : {};
+          toast({
+            title: 'Success',
+            description: data.message || 'Integrations initialized successfully',
+          });
+          console.log('Integrations initialized:', data);
+        } catch (jsonError) {
+          console.log('JSON parsing error:', jsonError);
+          toast({
+            title: 'Success',
+            description: 'Integrations initialized successfully',
+          });
+        }
         // Hide the button after successful initialization
-        setShowInitButton(false);
+        // setShowInitButton(false);
       } else {
         toast({
           title: 'Error',
-          description: data.message || 'Failed to initialize integrations',
+          description: `Failed to initialize: ${response.status} - ${responseText.substring(0, 100)}`,
           variant: 'destructive',
         });
       }
     } catch (error: any) {
+      console.log('Initialization error:', error);
       toast({
         title: 'Error',
         description: 'Failed to initialize integrations: ' + error.message,
@@ -88,10 +113,12 @@ export function PageLayout({ children }: PageLayoutProps) {
     const autoInitialize = async () => {
       try {
         // Use full URL on Railway to ensure proper routing
-        const isRailway = window.location.hostname.includes('railway');
+        const isRailway = window.location.hostname.includes('railway.app');
         const apiUrl = isRailway 
           ? `${window.location.origin}/api/integrations/initialize`
           : '/api/integrations/initialize';
+          
+        console.log('Auto-initializing - Making request to:', apiUrl);
           
         const response = await fetch(apiUrl, {
           method: 'POST',
@@ -100,18 +127,27 @@ export function PageLayout({ children }: PageLayoutProps) {
           },
         });
 
+        console.log('Auto-initialize response status:', response.status);
+        console.log('Auto-initialize response headers:', [...response.headers.entries()]);
+        
+        const responseText = await response.text();
+        console.log('Auto-initialize response text:', responseText);
+        
         if (response.ok) {
-          const data = await response.json();
-          console.log('Integrations auto-initialized:', data.message);
-          console.log('Success response:', data);
-          // Keep the button visible for testing
-          // setShowInitButton(false);
+          try {
+            const data = responseText ? JSON.parse(responseText) : {};
+            console.log('Integrations auto-initialized:', data.message);
+            console.log('Success response:', data);
+            // Keep the button visible for testing
+            // setShowInitButton(false);
+          } catch (jsonError) {
+            console.log('Auto-initialize JSON parsing error:', jsonError);
+          }
         } else {
           // If initialization fails, show the button so user can try manually
-          const errorText = await response.text();
           console.log('Auto-initialization failed, showing manual button');
           console.log('Response status:', response.status);
-          console.log('Response text:', errorText);
+          console.log('Response text:', responseText);
           // setShowInitButton(true);
         }
       } catch (error: any) {
@@ -226,7 +262,7 @@ export function PageLayout({ children }: PageLayoutProps) {
           <div className="text-xs text-gray-500 mt-1">
             Env: {process.env.NODE_ENV || 'unknown'} | 
             Host: {window.location.hostname} | 
-            API URL: {window.location.hostname.includes('railway') ? `${window.location.origin}/api/integrations/initialize` : '/api/integrations/initialize'}
+            API URL: {window.location.hostname.includes('railway.app') ? `${window.location.origin}/api/integrations/initialize` : '/api/integrations/initialize'}
           </div>
           {/* Test button to verify component rendering */}
           <button 
