@@ -1,9 +1,10 @@
 import React, { Suspense } from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Toaster } from '@/components/ui/toaster';
+import { Toaster as Sonner } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { toast } from '@/components/ui/use-toast';
 import Index from "./pages/Index";
 import Calendar from "./pages/Calendar";
 import Goals from "./pages/Goals";
@@ -79,12 +80,49 @@ const queryClient = new QueryClient();
 const App = () => {
   const [appReady, setAppReady] = useState(false);
   const [initError, setInitError] = useState(false);
+  const [showInitButton, setShowInitButton] = useState(true);
 
   // Initialize data when app starts
   useEffect(() => {
     // Set app ready immediately since we don't have initializeData
     setAppReady(true);
   }, []);
+
+  // Temporary function to initialize integrations
+  const handleInitializeIntegrations = async () => {
+    try {
+      const response = await fetch('/api/integrations/initialize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // Note: This will work without authentication since we removed the admin requirement
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast({
+          title: 'Success',
+          description: data.message || 'Integrations initialized successfully',
+        });
+        // Hide the button after successful initialization
+        setShowInitButton(false);
+      } else {
+        toast({
+          title: 'Error',
+          description: data.message || 'Failed to initialize integrations',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: 'Failed to initialize integrations: ' + error.message,
+        variant: 'destructive',
+      });
+    }
+  };
 
   if (!appReady) {
     return (
@@ -155,6 +193,17 @@ const App = () => {
             <TooltipProvider>
               <Toaster />
               <Sonner />
+              {/* Temporary initialization button - can be removed after use */}
+              {showInitButton && (
+                <div className="fixed top-4 right-4 z-50">
+                  <button
+                    onClick={handleInitializeIntegrations}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow-lg"
+                  >
+                    Initialize Integrations
+                  </button>
+                </div>
+              )}
               <BrowserRouter>
                 <Routes>
                   <Route path="/login" element={<Login />} />
