@@ -43,7 +43,13 @@ export const integrationAPI = {
     // Use the redirect URI from the environment or default to the frontend callback
     const finalRedirectUri = redirectUri || `${window.location.origin}/integrations/callback`;
     const data: any = { integrationId, code, redirectUri: finalRedirectUri };
-    return retryRequestWithFeedback(() => api.post<APIResponse<IntegrationConnection>>('/integrations/exchange', data), 3, 1000, 'exchanging code for tokens');
+    
+    console.log('Sending exchange code request', { integrationId, code: code ? 'present' : 'missing', redirectUri: finalRedirectUri });
+    
+    return retryRequestWithFeedback(() => {
+      console.log('Making API request to exchange code', { url: '/integrations/exchange', data });
+      return api.post<APIResponse<IntegrationConnection>>('/integrations/exchange', data);
+    }, 3, 1000, 'exchanging code for tokens');
   },
   
   // Get integration metrics

@@ -55,6 +55,7 @@ export default function IntegrationsCallback() {
         
         // Use the redirect URI from the environment or default to the frontend callback
         const redirectUri = `${window.location.origin}/integrations/callback`;
+        console.log('Exchanging code for tokens', { integrationId, code, redirectUri });
         const connection = await integrationService.exchangeCodeForTokens(integrationId, code, redirectUri);
         
         if (!connection) {
