@@ -67,6 +67,40 @@ export function PageLayout({ children }: PageLayoutProps) {
     };
   }, []);
 
+  // Automatically initialize integrations on page load
+  useEffect(() => {
+    const autoInitialize = async () => {
+      try {
+        const response = await fetch('/api/integrations/initialize', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Integrations auto-initialized:', data.message);
+          // Hide the button after successful initialization
+          setShowInitButton(false);
+        } else {
+          // If initialization fails, show the button so user can try manually
+          console.log('Auto-initialization failed, showing manual button');
+          setShowInitButton(true);
+        }
+      } catch (error) {
+        // If initialization fails, show the button so user can try manually
+        console.log('Auto-initialization error, showing manual button:', error);
+        setShowInitButton(true);
+      }
+    };
+
+    // Run initialization automatically after a short delay to ensure backend is ready
+    setTimeout(() => {
+      autoInitialize();
+    }, 1000);
+  }, []);
+
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
@@ -153,7 +187,7 @@ export function PageLayout({ children }: PageLayoutProps) {
               onClick={handleInitializeIntegrations}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg"
             >
-              Initialize Integrations
+              Initialize Integrations (Click if auto-init failed)
             </button>
           </div>
         )}
