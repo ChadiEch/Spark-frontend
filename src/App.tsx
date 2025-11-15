@@ -82,6 +82,104 @@ const App = () => {
   const [initError, setInitError] = useState(false);
   const [showInitButton, setShowInitButton] = useState(true);
 
+  // Auto-initialize on component mount and force show button on Railway
+  useEffect(() => {
+    const autoInitialize = async () => {
+      const isRailway = window.location.hostname.includes('railway.app');
+      
+      // Always show button on Railway
+      if (isRailway) {
+        setShowInitButton(true);
+      }
+      
+      try {
+        // Use full URL on Railway to ensure proper routing
+        const apiUrl = isRailway 
+          ? `${window.location.origin}/api/integrations/initialize`
+          : '/api/integrations/initialize';
+          
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Integrations auto-initialized:', data.message);
+          // Hide button after success only if not on Railway (for debugging)
+          if (!isRailway) {
+            // setShowInitButton(false);
+          }
+        } else {
+          const errorText = await response.text();
+          console.log('Auto-initialization failed:', response.status, errorText);
+          // Keep button visible for manual retry
+          setShowInitButton(true);
+        }
+      } catch (error: any) {
+        console.log('Auto-initialization error:', error);
+        // Keep button visible for manual retry
+        setShowInitButton(true);
+      }
+    };
+
+    // Run initialization with delay
+    setTimeout(() => {
+      autoInitialize();
+    }, 1000);
+  }, []);
+
+  // Force show button on Railway
+  useEffect(() => {
+    const isRailway = window.location.hostname.includes('railway');
+    if (isRailway) {
+      setShowInitButton(true);
+    }
+  }, []);
+
+  // Auto-initialize on component mount
+  useEffect(() => {
+    const autoInitialize = async () => {
+      try {
+        // Use full URL on Railway to ensure proper routing
+        const isRailway = window.location.hostname.includes('railway');
+        const apiUrl = isRailway 
+          ? `${window.location.origin}/api/integrations/initialize`
+          : '/api/integrations/initialize';
+          
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Integrations auto-initialized:', data.message);
+          // Hide button after success
+          // setShowInitButton(false);
+        } else {
+          const errorText = await response.text();
+          console.log('Auto-initialization failed:', response.status, errorText);
+          // Keep button visible for manual retry
+          setShowInitButton(true);
+        }
+      } catch (error: any) {
+        console.log('Auto-initialization error:', error);
+        // Keep button visible for manual retry
+        setShowInitButton(true);
+      }
+    };
+
+    // Run initialization with delay
+    setTimeout(() => {
+      autoInitialize();
+    }, 1000);
+  }, []);
+
   // Initialize data when app starts
   useEffect(() => {
     // Set app ready immediately since we don't have initializeData
@@ -91,12 +189,17 @@ const App = () => {
   // Temporary function to initialize integrations
   const handleInitializeIntegrations = async () => {
     try {
-      const response = await fetch('/api/integrations/initialize', {
+      // Use full URL on Railway to ensure proper routing
+      const isRailway = window.location.hostname.includes('railway');
+      const apiUrl = isRailway 
+        ? `${window.location.origin}/api/integrations/initialize`
+        : '/api/integrations/initialize';
+        
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        // Note: This will work without authentication since we removed the admin requirement
       });
 
       const data = await response.json();
@@ -106,16 +209,20 @@ const App = () => {
           title: 'Success',
           description: data.message || 'Integrations initialized successfully',
         });
+        console.log('Integrations initialized:', data);
         // Hide the button after successful initialization
-        setShowInitButton(false);
+        // setShowInitButton(false);
       } else {
+        const errorText = await response.text();
+        console.log('Initialization failed:', response.status, errorText);
         toast({
           title: 'Error',
-          description: data.message || 'Failed to initialize integrations',
+          description: `Failed to initialize: ${response.status} - ${errorText}`,
           variant: 'destructive',
         });
       }
     } catch (error: any) {
+      console.log('Initialization error:', error);
       toast({
         title: 'Error',
         description: 'Failed to initialize integrations: ' + error.message,
@@ -151,9 +258,9 @@ const App = () => {
                     <div className="fixed top-4 right-4 z-50">
                       <button
                         onClick={handleInitializeIntegrations}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow-lg"
+                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg"
                       >
-                        Initialize Integrations
+                        Initialize Integrations (Railway)
                       </button>
                     </div>
                   )}
@@ -205,6 +312,17 @@ const App = () => {
               <Toaster />
               <Sonner />
               <BrowserRouter>
+                {/* Temporary initialization button - can be removed after use */}
+                {showInitButton && (
+                  <div className="fixed top-4 right-4 z-50">
+                    <button
+                      onClick={handleInitializeIntegrations}
+                      className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg"
+                    >
+                      Initialize Integrations (Railway)
+                    </button>
+                  </div>
+                )}
                 <Routes>
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
