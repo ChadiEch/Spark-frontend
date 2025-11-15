@@ -53,7 +53,9 @@ export default function IntegrationsCallback() {
         setStatus('loading');
         setMessage('Exchanging authorization code for access tokens...');
         
-        const connection = await integrationService.exchangeCodeForTokens(integrationId, code);
+        // Use the redirect URI from the environment or default to the frontend callback
+        const redirectUri = `${window.location.origin}/integrations/callback`;
+        const connection = await integrationService.exchangeCodeForTokens(integrationId, code, redirectUri);
         
         if (!connection) {
           throw new Error('Failed to exchange code for tokens');

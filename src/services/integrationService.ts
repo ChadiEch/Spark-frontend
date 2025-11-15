@@ -40,10 +40,9 @@ export const integrationAPI = {
   
   // Exchange OAuth code for tokens
   exchangeCodeForTokens: (integrationId: string, code: string, redirectUri?: string) => {
-    const data: any = { integrationId, code };
-    if (redirectUri) {
-      data.redirectUri = redirectUri;
-    }
+    // Use the redirect URI from the environment or default to the frontend callback
+    const finalRedirectUri = redirectUri || `${window.location.origin}/integrations/callback`;
+    const data: any = { integrationId, code, redirectUri: finalRedirectUri };
     return retryRequestWithFeedback(() => api.post<APIResponse<IntegrationConnection>>('/integrations/exchange', data), 3, 1000, 'exchanging code for tokens');
   },
   
