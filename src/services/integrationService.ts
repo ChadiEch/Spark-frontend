@@ -39,7 +39,7 @@ export const integrationAPI = {
     retryRequestWithFeedback(() => api.get<APIResponse<{ connected: boolean; message?: string }>>(`/integrations/connections/${connectionId}/status`), 3, 1000, 'checking connection status'),
   
   // Exchange OAuth code for tokens
-  exchangeCodeForTokens: (integrationId: string, code: string, redirectUri?: string) => {
+  exchangeCodeForTokens: (integrationId: string, code: string, redirectUri?: string, userId?: string) => {
     // Use the redirect URI from the environment or default to the frontend callback
     // On Railway, we need to use the production URL instead of window.location.origin
     const isRailway = window.location.hostname.includes('railway.app');
@@ -49,7 +49,12 @@ export const integrationAPI = {
     const finalRedirectUri = redirectUri || `${frontendUrl}/integrations/callback`;
     const data: any = { integrationId, code, redirectUri: finalRedirectUri };
     
-    console.log('Sending exchange code request', { integrationId, code: code ? 'present' : 'missing', redirectUri: finalRedirectUri });
+    // Include userId if provided
+    if (userId) {
+      data.userId = userId;
+    }
+    
+    console.log('Sending exchange code request', { integrationId, code: code ? 'present' : 'missing', redirectUri: finalRedirectUri, userId });
     
     return retryRequestWithFeedback(() => {
       console.log('Making API request to exchange code', { url: '/integrations/exchange', data });

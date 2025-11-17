@@ -46,10 +46,14 @@ export default function IntegrationsCallback() {
           throw new Error('Invalid state parameter');
         }
         
-        const { integrationId } = stateData;
+        const { integrationId, userId } = stateData;
         
         if (!integrationId) {
           throw new Error('No integration ID in state');
+        }
+        
+        if (!userId) {
+          throw new Error('No user ID in state');
         }
         
         // Exchange the authorization code for access tokens
@@ -63,8 +67,8 @@ export default function IntegrationsCallback() {
           ? 'https://spark-frontend-production.up.railway.app'
           : window.location.origin;
         const redirectUri = `${frontendUrl}/integrations/callback`;
-        console.log('Exchanging code for tokens', { integrationId, code, redirectUri });
-        const connection = await integrationService.exchangeCodeForTokens(integrationId, code, redirectUri);
+        console.log('Exchanging code for tokens', { integrationId, code, redirectUri, userId });
+        const connection = await integrationService.exchangeCodeForTokens(integrationId, code, redirectUri, userId);
         
         console.log('Exchange result', connection);
         
