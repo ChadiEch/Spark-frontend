@@ -11,8 +11,8 @@ const PORT = process.env.PORT || 8080;
 // MIME types
 const mimeTypes = {
   '.html': 'text/html',
-  '.js': 'application/javascript', // Correct MIME type for JavaScript modules
-  '.mjs': 'application/javascript', // Add support for .mjs files
+  '.js': 'application/javascript',
+  '.mjs': 'application/javascript',
   '.css': 'text/css',
   '.json': 'application/json',
   '.png': 'image/png',
@@ -36,6 +36,13 @@ const server = http.createServer((req, res) => {
   
   // Default to index.html for root path
   if (pathname === '/') {
+    pathname = '/index.html';
+  }
+  
+  // Special handling for client-side routing - if requesting a JS file but path doesn't exist, 
+  // it might be a client-side route, so serve index.html
+  if (pathname.endsWith('.js') && !pathname.includes('/assets/')) {
+    console.log('Client-side route detected for JS request, serving index.html');
     pathname = '/index.html';
   }
   
@@ -84,9 +91,8 @@ const server = http.createServer((req, res) => {
       let mimeType = mimeTypes[ext] || 'application/octet-stream';
       
       // Special handling for JavaScript modules
-      if (ext === '.js' && req.headers.accept && req.headers.accept.includes('text/html')) {
-        // If the browser is requesting HTML but we're serving JS, it might be a routing issue
-        console.log('Potential routing issue: Browser requested HTML but we\'re serving JS');
+      if (ext === '.js') {
+        mimeType = 'application/javascript';
       }
       
       console.log(`Serving ${resolvedPath} with MIME type: ${mimeType}`);
