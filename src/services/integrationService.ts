@@ -39,37 +39,17 @@ export const integrationAPI = {
     retryRequestWithFeedback(() => api.get<APIResponse<{ connected: boolean; message?: string }>>(`/integrations/connections/${connectionId}/status`), 3, 1000, 'checking connection status'),
   
   // Exchange OAuth code for tokens
-  exchangeCodeForTokens: async (integrationId: string, code: string, redirectUri?: string): Promise<IntegrationConnection | null> => {
-    try {
-      // Try to use the real API
-      console.log('Attempting to exchange code for tokens via API', { integrationId, code: code ? 'present' : 'missing', redirectUri });
-      const response = await integrationAPI.exchangeCodeForTokens(integrationId, code, redirectUri);
-      console.log('API exchange response', response);
-      
-      // Handle redirect if provided in response
-      // Note: The integrationAPI function handles redirects internally, so we don't need to check for redirectUrl here
-      return response;
-    } catch (error: any) {
-      console.warn('Failed to exchange code for tokens via API:', error);
-      
-      // Check if it's a network error or server error
-      if (error.response) {
-        // Server responded with error status
-        console.error('Server error response:', {
-          status: error.response.status,
-          data: error.response.data
-        });
-      } else if (error.request) {
-        // Request was made but no response received
-        console.error('No response received from server:', error.request);
-      } else {
-        // Something else happened
-        console.error('Error setting up request:', error.message);
-      }
-      
-      // Fallback to simple service
-      return await simpleIntegrationService.exchangeCodeForTokens(integrationId, code);
-    }
+  exchangeCodeForTokens: (integrationId: string, code: string, redirectUri?: string) => {
+    // Use the redirect URI from the environment or default to the frontend callback
+    const finalRedirectUri = redirectUri || `${window.location.origin}/integrations/callback`;
+    const data: any = { integrationId, code, redirectUri: finalRedirectUri };
+    
+    console.log('Sending exchange code request', { integrationId, code: code ? 'present' : 'missing', redirectUri: finalRedirectUri });
+    
+    return retryRequestWithFeedback(() => {
+      console.log('Making API request to exchange code', { url: '/integrations/exchange', data });
+      return api.post<APIResponse<IntegrationConnection & { redirectUrl?: string }>>('/integrations/exchange', data);
+    }, 3, 1000, 'exchanging code for tokens');
   },
   
   // Get integration metrics
@@ -340,8 +320,14 @@ export const integrationService = {
       console.log('API exchange response', response);
       
       // Handle redirect if provided in response
-      // Note: The integrationAPI function handles redirects internally, so we don't need to check for redirectUrl here
-      return response;
+      if (response && response.data && (response.data as any).redirectUrl) {
+        console.log('Redirecting to:', (response.data as any).redirectUrl);
+        // Use window.location for full page redirect
+        window.location.href = (response.data as any).redirectUrl;
+        return response.data.data;
+      }
+      
+      return response.data.data;
     } catch (error: any) {
       console.warn('Failed to exchange code for tokens via API:', error);
       
