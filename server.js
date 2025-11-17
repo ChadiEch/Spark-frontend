@@ -11,7 +11,8 @@ const PORT = process.env.PORT || 8080;
 // MIME types
 const mimeTypes = {
   '.html': 'text/html',
-  '.js': 'text/javascript',
+  '.js': 'application/javascript', // Correct MIME type for JavaScript modules
+  '.mjs': 'application/javascript', // Add support for .mjs files
   '.css': 'text/css',
   '.json': 'application/json',
   '.png': 'image/png',
@@ -80,7 +81,14 @@ const server = http.createServer((req, res) => {
       }
     } else {
       // Set the content type
-      const mimeType = mimeTypes[ext] || 'application/octet-stream';
+      let mimeType = mimeTypes[ext] || 'application/octet-stream';
+      
+      // Special handling for JavaScript modules
+      if (ext === '.js' && req.headers.accept && req.headers.accept.includes('text/html')) {
+        // If the browser is requesting HTML but we're serving JS, it might be a routing issue
+        console.log('Potential routing issue: Browser requested HTML but we\'re serving JS');
+      }
+      
       console.log(`Serving ${resolvedPath} with MIME type: ${mimeType}`);
       res.writeHead(200, { 'Content-Type': mimeType });
       res.end(data);

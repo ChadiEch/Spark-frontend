@@ -333,6 +333,7 @@ export const integrationService = {
       
       // Handle redirect if provided in response
       if (response.data && (response.data as any).redirectUrl) {
+        console.log('Redirecting to:', (response.data as any).redirectUrl);
         // Use window.location for full page redirect
         window.location.href = (response.data as any).redirectUrl;
         return response.data.data;
