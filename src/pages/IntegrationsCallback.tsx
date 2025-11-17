@@ -22,6 +22,8 @@ export default function IntegrationsCallback() {
         const state = params.get('state');
         const error = params.get('error');
         
+        console.log('OAuth callback received', { code, state, error, search: location.search });
+        
         // Check for OAuth errors
         if (error) {
           throw new Error(`OAuth error: ${error}`);
@@ -39,6 +41,7 @@ export default function IntegrationsCallback() {
         let stateData;
         try {
           stateData = JSON.parse(decodeURIComponent(state));
+          console.log('Parsed state data', stateData);
         } catch (e) {
           throw new Error('Invalid state parameter');
         }
@@ -57,6 +60,8 @@ export default function IntegrationsCallback() {
         const redirectUri = `${window.location.origin}/integrations/callback`;
         console.log('Exchanging code for tokens', { integrationId, code, redirectUri });
         const connection = await integrationService.exchangeCodeForTokens(integrationId, code, redirectUri);
+        
+        console.log('Exchange result', connection);
         
         if (!connection) {
           throw new Error('Failed to exchange code for tokens');

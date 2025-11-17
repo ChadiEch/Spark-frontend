@@ -48,7 +48,19 @@ export const integrationAPI = {
     
     return retryRequestWithFeedback(() => {
       console.log('Making API request to exchange code', { url: '/integrations/exchange', data });
-      return api.post<APIResponse<IntegrationConnection>>('/integrations/exchange', data);
+      return api.post<APIResponse<IntegrationConnection & { redirectUrl?: string }>>('/integrations/exchange', data)
+        .then(response => {
+          console.log('API response received', response);
+          return response;
+        })
+        .catch(error => {
+          console.error('API request failed', { 
+            error: error.message, 
+            response: error.response?.data,
+            status: error.response?.status
+          });
+          throw error;
+        });
     }, 3, 1000, 'exchanging code for tokens');
   },
   
@@ -315,10 +327,36 @@ export const integrationService = {
   exchangeCodeForTokens: async (integrationId: string, code: string, redirectUri?: string): Promise<IntegrationConnection | null> => {
     try {
       // Try to use the real API
+      console.log('Attempting to exchange code for tokens via API', { integrationId, code: code ? 'present' : 'missing', redirectUri });
       const response = await integrationAPI.exchangeCodeForTokens(integrationId, code, redirectUri);
+      console.log('API exchange response', response);
+      
+      // Handle redirect if provided in response
+      if (response.data && (response.data as any).redirectUrl) {
+        // Use window.location for full page redirect
+        window.location.href = (response.data as any).redirectUrl;
+        return response.data.data;
+      }
+      
       return response.data.data;
-    } catch (error) {
-      console.warn('Failed to exchange code for tokens via API, using local simulation:', error);
+    } catch (error: any) {
+      console.warn('Failed to exchange code for tokens via API:', error);
+      
+      // Check if it's a network error or server error
+      if (error.response) {
+        // Server responded with error status
+        console.error('Server error response:', {
+          status: error.response.status,
+          data: error.response.data
+        });
+      } else if (error.request) {
+        // Request was made but no response received
+        console.error('No response received from server:', error.request);
+      } else {
+        // Something else happened
+        console.error('Error setting up request:', error.message);
+      }
+      
       // Fallback to simple service
       return await simpleIntegrationService.exchangeCodeForTokens(integrationId, code);
     }
