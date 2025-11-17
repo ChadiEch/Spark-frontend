@@ -33,8 +33,16 @@ const OAuthCallbackHandler: React.FC = () => {
           }
         }
         
+        // Use the redirect URI from the environment or default to the frontend callback
+        // On Railway, we need to use the production URL instead of window.location.origin
+        const isRailway = window.location.hostname.includes('railway.app');
+        const frontendUrl = isRailway 
+          ? 'https://spark-frontend-production.up.railway.app'
+          : window.location.origin;
+        const redirectUri = `${frontendUrl}/integrations/callback`;
+        
         // Exchange code for tokens
-        await integrationService.exchangeCodeForTokens(integrationId, code);
+        await integrationService.exchangeCodeForTokens(integrationId, code, redirectUri);
         
         toast({
           title: 'Success',
@@ -42,7 +50,7 @@ const OAuthCallbackHandler: React.FC = () => {
         });
         
         // Redirect to integrations page
-        navigate('/settings/integrations');
+        navigate('/settings?tab=integrations');
       } catch (error) {
         toast({
           title: 'Connection Failed',
@@ -51,7 +59,7 @@ const OAuthCallbackHandler: React.FC = () => {
         });
         
         // Redirect to integrations page even on failure
-        navigate('/settings/integrations');
+        navigate('/settings?tab=integrations');
       } finally {
         setProcessing(false);
       }
