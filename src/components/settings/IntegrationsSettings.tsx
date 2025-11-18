@@ -10,7 +10,7 @@ import {
   X
 } from 'lucide-react';
 import { Integration } from '@/types';
-
+ 
 interface IntegrationProps {
   id: string;
   name: string;
