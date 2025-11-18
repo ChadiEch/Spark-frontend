@@ -98,7 +98,7 @@ export function KPICards({
       case 'Target': return <Target className="w-8 h-8 mx-auto text-primary mb-2" />;
       case 'DollarSign': return <DollarSign className="w-8 h-8 mx-auto text-primary mb-2" />;
       case 'FileImage': return <FileImage className="w-8 h-8 mx-auto text-primary mb-2" />;
-      case 'TrendingUp': return <TrendingUp className="w-8 h-8 mx-auto text-primary mb-2" />;
+      case 'TrendingUp': return <TrendingUp className="w-8 h-8 mx-auto text-red-500 mb-2" />;
       case 'Users': return <Users className="w-8 h-8 mx-auto text-primary mb-2" />;
       default: return <span className="text-primary">❓</span>;
     }
@@ -116,11 +116,11 @@ export function KPICards({
             <div className="w-8 h-8 mx-auto mb-2">
               {getIconComponent(kpi.icon)}
             </div>
-            <p className="text-2xl font-bold">
+            <p className={`text-2xl font-bold ${kpi.icon === 'TrendingUp' ? 'text-red-500' : ''}`}>
               {kpi.value}
               {kpi.unit ? ` ${kpi.unit}` : ''}
             </p>
-            <p className="text-sm text-muted-foreground">{kpi.title}</p>
+            <p className={`text-sm ${kpi.icon === 'TrendingUp' ? 'text-red-500' : 'text-muted-foreground'}`}>{kpi.title}</p>
           </Card>
         </div>
       ))}
