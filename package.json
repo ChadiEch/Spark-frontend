@@ -317,8 +317,8 @@
     "dev": "vite",
     "build": "node simple-build.js",
     "preview": "vite preview",
-    "start": "vite preview --port ${PORT:-8080}",
-    "serve": "vite preview --port ${PORT:-8080}",
+    "start": "vite preview --port 8080",
+    "serve": "vite preview --port 8080",
     "railway-start": "npm run build && node server.js"
   },
   "keywords": [],
