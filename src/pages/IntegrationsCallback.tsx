@@ -61,11 +61,8 @@ export default function IntegrationsCallback() {
         setMessage('Exchanging authorization code for access tokens...');
         
         // Use the redirect URI from the environment or default to the frontend callback
-        // On Railway, we need to use the production URL instead of window.location.origin
-        const isRailway = window.location.hostname.includes('railway.app');
-        const frontendUrl = isRailway 
-          ? 'https://spark-frontend-production.up.railway.app'
-          : window.location.origin;
+        // Use the frontend URL from environment variables or default to window.location.origin
+        const frontendUrl = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
         const redirectUri = `${frontendUrl}/integrations/callback`;
         console.log('Exchanging code for tokens', { integrationId, code, redirectUri, userId });
         const connection = await integrationService.exchangeCodeForTokens(integrationId, code, redirectUri, userId);

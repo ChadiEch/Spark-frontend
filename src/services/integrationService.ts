@@ -40,12 +40,8 @@ export const integrationAPI = {
   
   // Exchange OAuth code for tokens
   exchangeCodeForTokens: (integrationId: string, code: string, redirectUri?: string, userId?: string) => {
-    // Use the redirect URI from the environment or default to the frontend callback
-    // On Railway, we need to use the production URL instead of window.location.origin
-    const isRailway = window.location.hostname.includes('railway.app');
-    const frontendUrl = isRailway 
-      ? 'https://spark-frontend-production.up.railway.app'
-      : window.location.origin;
+    // Use the frontend URL from environment variables or default to window.location.origin
+    const frontendUrl = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
     const finalRedirectUri = redirectUri || `${frontendUrl}/integrations/callback`;
     const data: any = { integrationId, code, redirectUri: finalRedirectUri };
     
