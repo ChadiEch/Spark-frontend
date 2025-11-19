@@ -40,7 +40,7 @@ export const integrationAPI = {
   
   // Exchange OAuth code for tokens
   exchangeCodeForTokens: (integrationId: string, code: string, redirectUri?: string, userId?: string) => {
-    // Use the frontend URL from environment variables or default to window.location.origin
+    // Use the frontend URL from environment variables - this must match the redirect URI used in the authorization URL
     const frontendUrl = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
     const finalRedirectUri = redirectUri || `${frontendUrl}/integrations/callback`;
     const data: any = { integrationId, code, redirectUri: finalRedirectUri };
