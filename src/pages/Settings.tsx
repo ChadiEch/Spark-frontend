@@ -784,9 +784,9 @@ const Settings = () => {
       // If not connected, initiate OAuth flow
       else {
         try {
-          // Use the frontend URL from environment variables or default to window.location.origin
-          const frontendUrl = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
-          const redirectUri = `${frontendUrl}/integrations/callback`;
+          // Use the backend URL from environment variables or default to localhost
+          const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+          const redirectUri = `${backendUrl}/api/integrations/callback`;
           
           // Get the authorization URL from the backend
           const response = await integrationService.connect(id, redirectUri);

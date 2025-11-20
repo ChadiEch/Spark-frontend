@@ -12,8 +12,29 @@ const OAuthCallbackHandler: React.FC = () => {
   useEffect(() => {
     const handleOAuthCallback = async () => {
       try {
-        // Parse query parameters
+        // Check if we're receiving success or error parameters from backend redirect
         const searchParams = new URLSearchParams(location.search);
+        const success = searchParams.get('success');
+        const error = searchParams.get('error');
+        
+        // If we have success or error parameters, it means we were redirected from backend
+        if (success !== null || error) {
+          if (error) {
+            throw new Error(decodeURIComponent(error));
+          }
+          
+          toast({
+            title: 'Success',
+            description: 'Successfully connected to the integration!'
+          });
+          
+          // Redirect to integrations page
+          navigate('/settings?tab=integrations');
+          return;
+        }
+        
+        // Otherwise, this is a direct OAuth callback from the provider
+        // Parse query parameters
         const code = searchParams.get('code');
         const state = searchParams.get('state');
         
@@ -71,12 +92,8 @@ const OAuthCallbackHandler: React.FC = () => {
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">
-        <h2 className="text-2xl font-bold mb-4">Processing Integration Connection</h2>
-        <p className="text-muted-foreground">
-          {processing 
-            ? 'Please wait while we complete the connection...' 
-            : 'Redirecting...'}
-        </p>
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+        <p>Processing OAuth callback...</p>
       </div>
     </div>
   );
