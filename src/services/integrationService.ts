@@ -40,9 +40,9 @@ export const integrationAPI = {
   
   // Exchange OAuth code for tokens
   exchangeCodeForTokens: (integrationId: string, code: string, redirectUri?: string, userId?: string) => {
-    // Use the frontend URL from environment variables - this must match the redirect URI used in the authorization URL
-    const frontendUrl = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
-    const finalRedirectUri = redirectUri || `${frontendUrl}/integrations/callback`;
+    // Use the backend URL for redirect URI to match OAuth provider configuration
+    const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001';
+    const finalRedirectUri = redirectUri || `${backendUrl}/api/integrations/callback`;
     const data: any = { integrationId, code, redirectUri: finalRedirectUri };
     
     // Include userId if provided
@@ -50,12 +50,7 @@ export const integrationAPI = {
       data.userId = userId;
     }
     
-    console.log('Sending exchange code request', { integrationId, code: code ? 'present' : 'missing', redirectUri: finalRedirectUri, userId });
-    
-    return retryRequestWithFeedback(() => {
-      console.log('Making API request to exchange code', { url: '/integrations/exchange', data });
-      return api.post<APIResponse<IntegrationConnection & { redirectUrl?: string }>>('/integrations/exchange', data);
-    }, 3, 1000, 'exchanging code for tokens');
+    return retryRequestWithFeedback(() => api.post<APIResponse<IntegrationConnection>>('/integrations/exchange', data), 3, 1000, 'exchanging code for tokens');
   },
   
   // Get integration metrics

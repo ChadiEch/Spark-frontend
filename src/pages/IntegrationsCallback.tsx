@@ -87,10 +87,10 @@ export default function IntegrationsCallback() {
         setStatus('loading');
         setMessage('Exchanging authorization code for access tokens...');
         
-        // Use the redirect URI from the environment or default to the frontend callback
-        // Use the frontend URL from environment variables or default to window.location.origin
-        const frontendUrl = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
-        const redirectUri = `${frontendUrl}/integrations/callback`;
+        // Use the redirect URI from the environment or default to the backend callback
+        // Use the backend URL for redirect URI to match OAuth provider configuration
+        const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001';
+        const redirectUri = `${backendUrl}/api/integrations/callback`;
         console.log('Exchanging code for tokens', { integrationId, code, redirectUri, userId });
         const connection = await integrationService.exchangeCodeForTokens(integrationId, code, redirectUri, userId);
         

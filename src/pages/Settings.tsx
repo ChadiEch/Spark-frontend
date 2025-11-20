@@ -784,8 +784,8 @@ const Settings = () => {
       // If not connected, initiate OAuth flow
       else {
         try {
-          // Use the backend URL from environment variables or default to localhost
-          const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+          // Use the backend URL for redirect URI to match OAuth provider configuration
+          const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001';
           const redirectUri = `${backendUrl}/api/integrations/callback`;
           
           // Get the authorization URL from the backend
