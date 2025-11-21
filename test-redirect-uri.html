@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Redirect URI Test</title>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .result { background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .success { background: #d4edda; border-left: 4px solid #28a745; }
+        .error { background: #f8d7da; border-left: 4px solid #dc3545; }
+        code { background: #e9ecef; padding: 2px 4px; border-radius: 3px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>Redirect URI Test</h1>
+    
+    <div class="result">
+        <h3>VITE_API_URL Environment Variable:</h3>
+        <p id="apiUrl">Checking...</p>
+    </div>
+    
+    <div class="result">
+        <h3>Generated Redirect URI:</h3>
+        <p id="redirectUri">Generating...</p>
+    </div>
+    
+    <div class="result" id="verificationResult">
+        <h3>Verification:</h3>
+        <p id="verificationText">Verifying...</p>
+    </div>
+    
+    <button onclick="copyToClipboard()">Copy Redirect URI</button>
+    <button onclick="checkAgain()">Check Again</button>
+    
+    <script>
+        function checkRedirectUri() {
+            try {
+                // Get the VITE_API_URL
+                const apiUrl = import.meta.env.VITE_API_URL || 'Not set';
+                document.getElementById('apiUrl').textContent = apiUrl;
+                
+                // Generate the redirect URI
+                const backendUrl = apiUrl?.replace('/api', '') || 'http://localhost:5001';
+                const redirectUri = `${backendUrl}/api/integrations/callback`;
+                document.getElementById('redirectUri').textContent = redirectUri;
+                
+                // Check if it matches the expected production URI
+                const expectedUri = 'https://spark-backend-production.up.railway.app/api/integrations/callback';
+                const isMatch = redirectUri === expectedUri;
+                
+                const resultElement = document.getElementById('verificationResult');
+                const textElement = document.getElementById('verificationText');
+                
+                if (isMatch) {
+                    resultElement.className = 'result success';
+                    textElement.innerHTML = `✅ <strong>Perfect match!</strong> The redirect URI matches the expected production URI.`;
+                } else {
+                    resultElement.className = 'result error';
+                    textElement.innerHTML = `❌ <strong>Mismatch!</strong> The redirect URI does not match the expected production URI.<br>
+                    Expected: <code>${expectedUri}</code><br>
+                    Got: <code>${redirectUri}</code>`;
+                }
+            } catch (error) {
+                document.getElementById('apiUrl').textContent = 'Error: ' + error.message;
+                document.getElementById('redirectUri').textContent = 'Error generating URI';
+                document.getElementById('verificationText').textContent = 'Error during verification';
+            }
+        }
+        
+        function copyToClipboard() {
+            const redirectUri = document.getElementById('redirectUri').textContent;
+            navigator.clipboard.writeText(redirectUri).then(() => {
+                alert('Redirect URI copied to clipboard!');
+            }).catch(err => {
+                alert('Failed to copy: ' + err);
+            });
+        }
+        
+        function checkAgain() {
+            checkRedirectUri();
+        }
+        
+        // Run the check when page loads
+        checkRedirectUri();
+    </script>
+</body>
+</html>
