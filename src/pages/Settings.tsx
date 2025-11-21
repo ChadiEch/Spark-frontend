@@ -1786,6 +1786,34 @@ const Settings = () => {
                     {initializingIntegrations ? 'Initializing...' : 'Initialize Integrations'}
                   </Button>
                 </div>
+                
+                {/* Redirect URI for testing */}
+                <Card className="p-4 bg-muted">
+                  <h3 className="font-semibold mb-2">OAuth Redirect URI (for testing)</h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    This is the redirect URI that should be registered in your OAuth provider console.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 bg-background p-2 rounded text-sm break-all">
+                      {import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001'}/api/integrations/callback
+                    </code>
+                    <Button 
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const redirectUri = `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001'}/api/integrations/callback`;
+                        navigator.clipboard.writeText(redirectUri);
+                        toast({
+                          title: "Copied to clipboard",
+                          description: "Redirect URI copied to clipboard",
+                        });
+                      }}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                </Card>
+                
                 <IntegrationsSettings 
                   integrations={integrations} 
                   onToggleConnection={handleToggleIntegration} 
