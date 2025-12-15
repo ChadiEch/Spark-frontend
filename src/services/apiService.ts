@@ -33,7 +33,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 second timeout
+  timeout: 5000, // 5 second timeout
 });
 
 // Add auth token to requests
@@ -43,12 +43,14 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
-    // Add a shorter timeout for Railway environments to prevent hanging
+      
+    // Add shorter timeouts for different environments
     if (typeof window !== 'undefined' && window.location.hostname.includes('railway.app')) {
-      config.timeout = 15000; // 15 seconds on Railway
+      config.timeout = 5000; // 5 seconds on Railway
+    } else {
+      config.timeout = 5000; // 5 seconds in all other environments
     }
-    
+      
     return config;
   },
   (error) => {

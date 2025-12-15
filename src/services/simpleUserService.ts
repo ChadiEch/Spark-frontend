@@ -61,7 +61,7 @@ export const simpleUserService = {
     try {
       // Add timeout wrapper
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('getCurrentUser request timed out')), 10000)
+        setTimeout(() => reject(new Error('getCurrentUser request timed out')), 3000)
       );
       
       const apiPromise = authAPI.getMe();

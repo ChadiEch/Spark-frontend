@@ -22,9 +22,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         console.log('AuthProvider: Initializing authentication...');
         
+        // Check if we have cached user data to avoid unnecessary API calls
+        const cachedUser = localStorage.getItem('winnerforce_current_user');
+        if (cachedUser) {
+          try {
+            const parsedUser = JSON.parse(cachedUser);
+            // Check if the cached user data is recent (less than 5 minutes old)
+            const cacheTime = localStorage.getItem('winnerforce_auth_cache_time');
+            if (cacheTime && Date.now() - parseInt(cacheTime) < 5 * 60 * 1000) {
+              setUser(parsedUser);
+              console.log('AuthProvider: Using cached user data');
+              setIsLoading(false);
+              return;
+            }
+          } catch (e) {
+            // If parsing fails, continue with normal authentication
+            console.log('AuthProvider: Failed to parse cached user data, continuing with normal auth');
+          }
+        }
+        
         // Add a timeout to prevent hanging
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Authentication check timed out')), 15000)
+          setTimeout(() => reject(new Error('Authentication check timed out')), 5000)
         );
         
         const authPromise = simpleUserService.getCurrentUser();
@@ -38,14 +57,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
         if (currentUser) {
           setUser(currentUser);
+          // Cache the user data
+          localStorage.setItem('winnerforce_current_user', JSON.stringify(currentUser));
+          localStorage.setItem('winnerforce_auth_cache_time', Date.now().toString());
           console.log('AuthProvider: User authenticated:', currentUser.email);
         } else {
           console.log('AuthProvider: No authenticated user found');
+          // Clear cache if no user found
+          localStorage.removeItem('winnerforce_current_user');
+          localStorage.removeItem('winnerforce_auth_cache_time');
         }
       } catch (error) {
         console.error('AuthProvider: Error initializing auth:', error);
         // Even if there's an error, we still need to finish loading
         setUser(null);
+        // Clear cache on error
+        localStorage.removeItem('winnerforce_current_user');
+        localStorage.removeItem('winnerforce_auth_cache_time');
       } finally {
         setIsLoading(false);
         console.log('AuthProvider: Authentication check completed');
@@ -89,10 +117,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     
     setUser(null);
-    // Clear any stored tokens
+    // Clear any stored tokens and cache
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('winnerforce_current_user');
+    localStorage.removeItem('winnerforce_auth_cache_time');
+    localStorage.removeItem('rememberMe');
   };
 
   const updateProfile = async (userData: Partial<User>) => {
