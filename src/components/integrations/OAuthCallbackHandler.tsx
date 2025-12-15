@@ -60,7 +60,7 @@ const OAuthCallbackHandler: React.FC = () => {
         const redirectUri = `${backendUrl}/api/integrations/callback`;
         
         // Exchange code for tokens
-        await integrationService.exchangeCodeForTokens(integrationId, code, redirectUri);
+        await integrationService.exchangeCodeForTokens(integrationId, code, redirectUri, '');
         
         toast({
           title: 'Success',

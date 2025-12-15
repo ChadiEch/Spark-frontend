@@ -92,6 +92,12 @@ const App = () => {
         setShowInitButton(true);
       }
       
+      // Skip auto-initialization on Railway to prevent hanging
+      if (isRailway) {
+        console.log('Skipping auto-initialization on Railway');
+        return;
+      }
+      
       try {
         // Use full URL on Railway to ensure proper routing
         const apiUrl = isRailway 
@@ -135,7 +141,7 @@ const App = () => {
         setShowInitButton(true);
       }
     };
-
+    
     // Run initialization with delay
     setTimeout(() => {
       autoInitialize();
@@ -153,9 +159,16 @@ const App = () => {
   // Auto-initialize on component mount
   useEffect(() => {
     const autoInitialize = async () => {
+      const isRailway = window.location.hostname.includes('railway.app');
+      
+      // Skip auto-initialization on Railway to prevent hanging
+      if (isRailway) {
+        console.log('Skipping auto-initialization on Railway (second useEffect)');
+        return;
+      }
+      
       try {
         // Use full URL on Railway to ensure proper routing
-        const isRailway = window.location.hostname.includes('railway');
         const apiUrl = isRailway 
           ? `${window.location.origin}/api/integrations/initialize`
           : '/api/integrations/initialize';
@@ -202,6 +215,17 @@ const App = () => {
     try {
       // Use full URL on Railway to ensure proper routing
       const isRailway = window.location.hostname.includes('railway.app');
+      
+      // Skip initialization on Railway
+      if (isRailway) {
+        console.log('Skipping initialization on Railway - not supported');
+        toast({
+          title: "Initialization",
+          description: "Initialization is handled automatically on Railway deployments.",
+        });
+        return;
+      }
+      
       const apiUrl = isRailway 
         ? `${window.location.origin}/api/integrations/initialize`
         : '/api/integrations/initialize';

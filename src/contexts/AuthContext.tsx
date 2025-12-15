@@ -21,7 +21,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const initializeAuth = async () => {
       try {
         console.log('AuthProvider: Initializing authentication...');
-        const currentUser = await simpleUserService.getCurrentUser();
+        
+        // Add a timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Authentication check timed out')), 15000)
+        );
+        
+        const authPromise = simpleUserService.getCurrentUser();
+        
+        // Race the authentication check against the timeout
+        const currentUser = await Promise.race([authPromise, timeoutPromise])
+          .catch(error => {
+            console.error('AuthProvider: Authentication check failed or timed out:', error);
+            return null;
+          }) as User | null;
+          
         if (currentUser) {
           setUser(currentUser);
           console.log('AuthProvider: User authenticated:', currentUser.email);

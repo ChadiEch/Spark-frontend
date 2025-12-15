@@ -39,6 +39,12 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Add a shorter timeout for Railway environments to prevent hanging
+    if (typeof window !== 'undefined' && window.location.hostname.includes('railway.app')) {
+      config.timeout = 15000; // 15 seconds on Railway
+    }
+    
     return config;
   },
   (error) => {
@@ -73,7 +79,7 @@ api.interceptors.response.use(
       if (refreshToken) {
         try {
           const response = await authAPI.refreshToken(refreshToken);
-          const { token } = response.data;
+          const token = (response.data as any).token;
           
           // Store new token
           localStorage.setItem('token', token);
@@ -242,3 +248,6 @@ export const exportAPI = {
 export const searchAPI = {
   global: (query: string) => api.get<APIResponse<any>>('/search', { params: { q: query } })
 };
+
+// Export the api instance as default for backward compatibility
+export default api;

@@ -102,6 +102,12 @@ export const integrationService = {
 
   initializeIntegrations: async (): Promise<any> => {
     try {
+      // Check if we're on Railway - if so, skip initialization as it's handled automatically
+      if (typeof window !== 'undefined' && window.location.hostname.includes('railway.app')) {
+        console.log('Skipping integration initialization on Railway - handled automatically');
+        return { success: true, message: 'Initialization handled automatically on Railway' };
+      }
+      
       const response = await fetch('/api/integrations/initialize', {
         method: 'POST',
         headers: {

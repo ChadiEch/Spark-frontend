@@ -16,7 +16,7 @@ const testAuthEndpoint = async () => {
     try {
       const healthResponse = await axios.get(`${API_BASE_URL}/health`, { timeout: 5000 });
       console.log('✅ Server health check successful:', healthResponse.data);
-    } catch (error) {
+    } catch (error: any) {
       console.log('❌ Server health check failed:', error.message);
       return;
     }
@@ -37,7 +37,7 @@ const testAuthEndpoint = async () => {
     }
     
     console.log('\n=== AUTHENTICATION ENDPOINT TEST COMPLETE ===');
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error during test:', error);
   }
 };

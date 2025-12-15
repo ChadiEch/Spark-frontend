@@ -129,11 +129,8 @@ const Settings = () => {
 
     setIsInviting(true);
     try {
-      // Import the invitation service
-      const { invitationAPI } = await import('@/services/apiService');
-      
-      // Send invitation
-      const response = await invitationAPI.inviteMember({
+      // Send invitation using direct API call
+      const response = await api.post('/invitations', {
         email: inviteData.email,
         role: inviteData.role
       });
@@ -487,10 +484,10 @@ const Settings = () => {
         }
         
         // Merge the data to show which integrations are connected
-        const mergedIntegrations = availableIntegrations.map(integration => {
+        const mergedIntegrations = availableIntegrations.map((integration: any) => {
           // Find connection by matching connection.integrationId with integration.id or integration.key
           // Handle both string and ObjectId cases
-          const connection = userConnections.find(conn => {
+          const connection = userConnections.find((conn: any) => {
             // Check if integrationId matches integration.id
             if (conn.integrationId && integration.id) {
               return conn.integrationId.toString() === integration.id.toString();
@@ -631,7 +628,7 @@ const Settings = () => {
         const userConnections = await integrationService.getUserConnections();
                 
         const mergedIntegrations = availableIntegrations.map(integration => {
-          const connection = userConnections.find(conn => {
+          const connection = userConnections.find((conn: any) => {
             if (conn.integrationId && integration.id) {
               return conn.integrationId.toString() === integration.id.toString();
             }
@@ -698,7 +695,7 @@ const Settings = () => {
         const userConnections = await integrationService.getUserConnections();
         
         const mergedIntegrations = availableIntegrations.map(integration => {
-          const connection = userConnections.find(conn => {
+          const connection = userConnections.find((conn: any) => {
             if (conn.integrationId && integration.id) {
               return conn.integrationId.toString() === integration.id.toString();
             }
@@ -813,7 +810,7 @@ const Settings = () => {
         const userConnections = await integrationService.getUserConnections();
         
         const mergedIntegrations = availableIntegrations.map(integration => {
-          const connection = userConnections.find(conn => {
+          const connection = userConnections.find((conn: any) => {
             if (conn.integrationId && integration.id) {
               return conn.integrationId.toString() === integration.id.toString();
             }
