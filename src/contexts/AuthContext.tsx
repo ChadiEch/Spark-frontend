@@ -20,16 +20,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check if user is already logged in
     const initializeAuth = async () => {
       try {
+        console.log('AuthProvider: Initializing authentication...');
         const currentUser = await simpleUserService.getCurrentUser();
         if (currentUser) {
           setUser(currentUser);
+          console.log('AuthProvider: User authenticated:', currentUser.email);
+        } else {
+          console.log('AuthProvider: No authenticated user found');
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
+        console.error('AuthProvider: Error initializing auth:', error);
         // Even if there's an error, we still need to finish loading
         setUser(null);
       } finally {
         setIsLoading(false);
+        console.log('AuthProvider: Authentication check completed');
       }
     };
     
@@ -49,14 +54,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       // If we get here, authentication failed but no error was thrown
       throw new Error('Invalid email or password');
-    } catch (error) {
+    } catch (error: any) {
       console.error('AuthContext: Login error:', error);
+      // Handle timeout errors specifically
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        throw new Error('Login request timed out. Please try again.');
+      }
       // Re-throw the error so the UI can handle it
       throw error;
     }
   };
 
   const logout = () => {
+    console.log('AuthContext: Logging out user');
     // Import the userService logout function dynamically to avoid circular dependencies
     import('@/services/dataService').then(({ userService }) => {
       userService.logout();
@@ -65,6 +75,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     
     setUser(null);
+    // Clear any stored tokens
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('winnerforce_current_user');
   };
 
   const updateProfile = async (userData: Partial<User>) => {
