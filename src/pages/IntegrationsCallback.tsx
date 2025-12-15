@@ -4,7 +4,7 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, XCircle } from 'lucide-react';
-import { integrationService } from '@/services/integrationService';
+import { integrationService } from '../services/integrationService';
 import { toast } from '@/components/ui/use-toast';
 
 export default function IntegrationsCallback() {
@@ -89,7 +89,11 @@ export default function IntegrationsCallback() {
         
         // Use the redirect URI from the environment or default to the backend callback
         // Use the backend URL for redirect URI to match OAuth provider configuration
-        const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001';
+        // On Railway, this should be configured in the Railway dashboard
+        const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 
+          (typeof window !== 'undefined' && window.location.hostname.includes('railway.app') 
+            ? `https://${window.location.hostname.replace('frontend', 'backend')}`
+            : 'http://localhost:5001');
         const redirectUri = `${backendUrl}/api/integrations/callback`;
         console.log('Exchanging code for tokens', { integrationId, code, redirectUri, userId });
         const connection = await integrationService.exchangeCodeForTokens(integrationId, code, redirectUri, userId);

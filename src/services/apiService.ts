@@ -21,7 +21,11 @@ import { retryRequest, retryRequestWithFeedback } from '../lib/retryUtils';
 // Create axios instance
 // In production, VITE_API_URL should be set to the backend service URL
 // In development, it defaults to localhost:5001
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+// On Railway, this should be configured in the Railway dashboard
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (typeof window !== 'undefined' && window.location.hostname.includes('railway.app') 
+    ? `https://${window.location.hostname.replace('frontend', 'backend')}/api`
+    : 'http://localhost:5001/api');
 
 const api = axios.create({
   baseURL: API_BASE_URL,

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Integration, IntegrationConnection } from '@/types';
-import { integrationService } from '@/services/integrationService';
+import { integrationService } from '../../services/integrationService';
 import { useToast } from '@/hooks/use-toast';
 
 interface IntegrationCardProps {
@@ -19,12 +19,18 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
 }) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   const handleConnect = async () => {
-    setIsLoading(true);
     try {
+      setIsConnecting(true);
+      
       // Use the backend URL for redirect URI to match OAuth provider configuration
-      const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001';
+      // On Railway, this should be configured in the Railway dashboard
+      const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 
+        (typeof window !== 'undefined' && window.location.hostname.includes('railway.app') 
+          ? `https://${window.location.hostname.replace('frontend', 'backend')}`
+          : 'http://localhost:5001');
       const redirectUri = `${backendUrl}/api/integrations/callback`;
       
       const result = await integrationService.connect(integration.id, redirectUri);
@@ -39,7 +45,7 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
         variant: 'destructive'
       });
     } finally {
-      setIsLoading(false);
+      setIsConnecting(false);
     }
   };
 
@@ -70,7 +76,7 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
     
     setIsLoading(true);
     try {
-      await integrationService.refreshConnection(connection.id);
+      await integrationService.refresh(connection.id);
       toast({
         title: 'Tokens Refreshed',
         description: `Successfully refreshed connection to ${integration.name}`

@@ -56,7 +56,11 @@ const OAuthCallbackHandler: React.FC = () => {
         
         // Use the redirect URI from the environment or default to the backend callback
         // Use the backend URL for redirect URI to match OAuth provider configuration
-        const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001';
+        // On Railway, this should be configured in the Railway dashboard
+        const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 
+          (typeof window !== 'undefined' && window.location.hostname.includes('railway.app') 
+            ? `https://${window.location.hostname.replace('frontend', 'backend')}`
+            : 'http://localhost:5001');
         const redirectUri = `${backendUrl}/api/integrations/callback`;
         
         // Exchange code for tokens

@@ -782,7 +782,12 @@ const Settings = () => {
       else {
         try {
           // Use the backend URL for redirect URI to match OAuth provider configuration
-          const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001';
+                  // Use the backend URL for redirect URI to match OAuth provider configuration
+                  // On Railway, this should be configured in the Railway dashboard
+                  const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 
+                    (typeof window !== 'undefined' && window.location.hostname.includes('railway.app') 
+                      ? `https://${window.location.hostname.replace('frontend', 'backend')}`
+                      : 'http://localhost:5001');
           const redirectUri = `${backendUrl}/api/integrations/callback`;
           
           // Get the authorization URL from the backend
@@ -1792,13 +1797,19 @@ const Settings = () => {
                   </p>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 bg-background p-2 rounded text-sm break-all">
-                      {import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001'}/api/integrations/callback
+                      {(import.meta.env.VITE_API_URL?.replace('/api', '') || 
+  (typeof window !== 'undefined' && window.location.hostname.includes('railway.app') 
+    ? `https://${window.location.hostname.replace('frontend', 'backend')}`
+    : 'http://localhost:5001'))}/api/integrations/callback
                     </code>
                     <Button 
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        const redirectUri = `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001'}/api/integrations/callback`;
+                        const redirectUri = `${(import.meta.env.VITE_API_URL?.replace('/api', '') || 
+                          (typeof window !== 'undefined' && window.location.hostname.includes('railway.app') 
+                            ? `https://${window.location.hostname.replace('frontend', 'backend')}`
+                            : 'http://localhost:5001'))}/api/integrations/callback`;
                         navigator.clipboard.writeText(redirectUri);
                         toast({
                           title: "Copied to clipboard",

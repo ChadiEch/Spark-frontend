@@ -9,7 +9,12 @@ const testAuthEndpoint = async () => {
     // Test the /api/auth/me endpoint
     console.log('Testing /api/auth/me endpoint...');
     
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+    // Use VITE_API_URL from environment or fall back to sensible defaults
+    // On Railway, this should be configured in the Railway dashboard
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 
+      (typeof window !== 'undefined' && window.location.hostname.includes('railway.app') 
+        ? `https://${window.location.hostname.replace('frontend', 'backend')}/api`
+        : 'http://localhost:5001/api');
     console.log('Using API base URL:', API_BASE_URL);
     
     // First check if we can reach the server
