@@ -48,6 +48,8 @@ import TestDateLogic from "./pages/TestDateLogic";
 import TestCalendarEvents from "./pages/TestCalendarEvents";
 // Import TestGoalCampaigns component
 import TestGoalCampaigns from "./pages/TestGoalCampaigns";
+// Import TestBackendConnectivity component
+import TestBackendConnectivity from "./pages/TestBackendConnectivity";
 // Import campaign components
 import Campaigns from "./pages/campaigns";
 import CreateCampaign from "./pages/campaigns/CreateCampaign";
@@ -380,6 +382,11 @@ const App = () => {
                   <Route path="/test-index" element={
                     <ProtectedRoute>
                       <TestIndex />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/test/backend-connectivity" element={
+                    <ProtectedRoute>
+                      <TestBackendConnectivity />
                     </ProtectedRoute>
                   } />
                   <Route path="/" element={

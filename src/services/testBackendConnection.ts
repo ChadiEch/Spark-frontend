@@ -12,22 +12,51 @@ const api = axios.create({
   }
 });
 
-export const testBackendConnection = async (): Promise<boolean> => {
+export const testBackendConnection = async (): Promise<{ 
+  backendConnected: boolean; 
+  databaseConnected: boolean; 
+  databaseInfo: any;
+  healthData: any;
+}> => {
   try {
     const response = await api.get('/health');
     console.log('Backend connection test result:', response.data);
     
+    // Extract health data
+    const healthData = response.data.data;
+    
     // Check if the backend is running
-    if (response.data.success && response.data.data && response.data.data.message === 'OK') {
+    const backendConnected = response.data.success && healthData && healthData.message === 'OK';
+    
+    // Check database connectivity
+    const databaseConnected = healthData?.database?.status === 'connected';
+    const databaseInfo = healthData?.database || {};
+    
+    if (backendConnected) {
       console.log('✅ Backend is running and accessible');
-      return true;
+      if (databaseConnected) {
+        console.log('✅ Database is connected:', databaseInfo);
+      } else {
+        console.log('⚠️ Database is not connected:', databaseInfo);
+      }
     } else {
       console.log('❌ Backend is not running properly');
-      return false;
     }
+    
+    return {
+      backendConnected,
+      databaseConnected,
+      databaseInfo,
+      healthData
+    };
   } catch (error) {
     console.error('❌ Backend connection test failed:', error);
-    return false;
+    return {
+      backendConnected: false,
+      databaseConnected: false,
+      databaseInfo: {},
+      healthData: {}
+    };
   }
 };
 

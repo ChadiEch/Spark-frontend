@@ -320,6 +320,7 @@
     "start": "vite preview --port 8080",
     "serve": "vite preview --port 8080",
     "railway-start": "npm run build && node server.js",
+    "test-backend": "node test-backend-connectivity.js",
     "postinstall": "chmod +x node_modules/.bin/vite || true" 
   },
   "keywords": [],
