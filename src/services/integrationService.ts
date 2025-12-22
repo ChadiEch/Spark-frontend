@@ -25,15 +25,14 @@ export const integrationService = {
     }
   },
 
-  connect: async (integrationId: string, redirectUri: string): Promise<any> => {
+  connect: async (integrationId: string, redirectUri: string): Promise<{ authorizationUrl: string } | null> => {
     try {
-      // This would typically redirect the user to the OAuth flow
-      // For now, we'll just simulate the connection process
-      window.location.href = `/api/integrations/connect?integrationId=${integrationId}&redirectUri=${encodeURIComponent(redirectUri)}`;
-      return { success: true };
+      // Call the backend API to get the authorization URL
+      const response = await integrationAPI.connect(integrationId, redirectUri);
+      return response.data.data;
     } catch (error) {
       handleApiError(error, 'connecting', 'integration');
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return null;
     }
   },
 

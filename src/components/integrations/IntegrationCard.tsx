@@ -142,9 +142,9 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
           ) : (
             <Button 
               onClick={handleConnect}
-              disabled={isLoading || !integration.enabled}
+              disabled={isConnecting || !integration.enabled}
             >
-              {isLoading ? 'Connecting...' : 'Connect'}
+              {isConnecting ? 'Connecting...' : 'Connect'}
             </Button>
           )}
         </div>
