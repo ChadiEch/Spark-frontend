@@ -40,7 +40,7 @@ export const simpleUserService = {
     try {
       const response = await userAPI.getAll(params);
       const users = response.data && Array.isArray((response.data as any).data) ? (response.data as any).data : [];
-      return users.map(user => convertDatesInObject(user));
+      return users.map((user: any) => convertDatesInObject(user));
     } catch (error) {
       handleApiError(error, 'fetching', 'users');
       return [];
@@ -59,7 +59,20 @@ export const simpleUserService = {
   
   getCurrentUser: async (): Promise<User | null> => {
     try {
-      const response = await authAPI.getMe();
+      // Add timeout wrapper
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('getCurrentUser request timed out')), 3000)
+      );
+      
+      const apiPromise = authAPI.getMe();
+      
+      // Race the API call against the timeout
+      const response: any = await Promise.race([apiPromise, timeoutPromise])
+        .catch(error => {
+          console.error('SimpleUserService: getCurrentUser failed or timed out:', error);
+          throw error;
+        });
+      
       if (response.data && response.data.user) {
         return convertDatesInObject(response.data.user);
       }

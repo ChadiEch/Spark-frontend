@@ -48,6 +48,8 @@ import TestDateLogic from "./pages/TestDateLogic";
 import TestCalendarEvents from "./pages/TestCalendarEvents";
 // Import TestGoalCampaigns component
 import TestGoalCampaigns from "./pages/TestGoalCampaigns";
+// Import TestBackendConnectivity component
+import TestBackendConnectivity from "./pages/TestBackendConnectivity";
 // Import campaign components
 import Campaigns from "./pages/campaigns";
 import CreateCampaign from "./pages/campaigns/CreateCampaign";
@@ -90,6 +92,12 @@ const App = () => {
       // Always show button on Railway
       if (isRailway) {
         setShowInitButton(true);
+      }
+      
+      // Skip auto-initialization on Railway to prevent hanging
+      if (isRailway) {
+        console.log('Skipping auto-initialization on Railway');
+        return;
       }
       
       try {
@@ -135,7 +143,7 @@ const App = () => {
         setShowInitButton(true);
       }
     };
-
+    
     // Run initialization with delay
     setTimeout(() => {
       autoInitialize();
@@ -153,9 +161,16 @@ const App = () => {
   // Auto-initialize on component mount
   useEffect(() => {
     const autoInitialize = async () => {
+      const isRailway = window.location.hostname.includes('railway.app');
+      
+      // Skip auto-initialization on Railway to prevent hanging
+      if (isRailway) {
+        console.log('Skipping auto-initialization on Railway (second useEffect)');
+        return;
+      }
+      
       try {
         // Use full URL on Railway to ensure proper routing
-        const isRailway = window.location.hostname.includes('railway');
         const apiUrl = isRailway 
           ? `${window.location.origin}/api/integrations/initialize`
           : '/api/integrations/initialize';
@@ -202,6 +217,17 @@ const App = () => {
     try {
       // Use full URL on Railway to ensure proper routing
       const isRailway = window.location.hostname.includes('railway.app');
+      
+      // Skip initialization on Railway
+      if (isRailway) {
+        console.log('Skipping initialization on Railway - not supported');
+        toast({
+          title: "Initialization",
+          description: "Initialization is handled automatically on Railway deployments.",
+        });
+        return;
+      }
+      
       const apiUrl = isRailway 
         ? `${window.location.origin}/api/integrations/initialize`
         : '/api/integrations/initialize';
@@ -356,6 +382,11 @@ const App = () => {
                   <Route path="/test-index" element={
                     <ProtectedRoute>
                       <TestIndex />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/test/backend-connectivity" element={
+                    <ProtectedRoute>
+                      <TestBackendConnectivity />
                     </ProtectedRoute>
                   } />
                   <Route path="/" element={

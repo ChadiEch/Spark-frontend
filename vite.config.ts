@@ -13,8 +13,14 @@ export default defineConfig(async () => {
     },
     server: {
       port: process.env.PORT ? parseInt(process.env.PORT) : 8080,
-      host: true
-      // Removed proxy configuration as it's only for development
+      host: true,
+      proxy: {
+        '/api': {
+          target: 'http://localhost:5003',
+          changeOrigin: true,
+          secure: false
+        }
+      }
     },
     build: {
       outDir: 'dist',

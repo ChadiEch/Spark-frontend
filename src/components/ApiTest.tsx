@@ -6,21 +6,25 @@ import { testAndSetAPIAvailability } from '@/services/dataService';
 
 export function ApiTest() {
   const [connectionStatus, setConnectionStatus] = useState<string>('Checking...');
+  const [databaseStatus, setDatabaseStatus] = useState<string>('Checking...');
+  const [databaseInfo, setDatabaseInfo] = useState<any>(null);
   const [apiStatus, setApiStatus] = useState<string>('Checking...');
   const [endpointStatus, setEndpointStatus] = useState<any>(null);
 
   useEffect(() => {
     const runTests = async () => {
       // Test backend connection
-      const isBackendAvailable = await testBackendConnection();
-      setConnectionStatus(isBackendAvailable ? 'Connected' : 'Not Connected');
+      const result = await testBackendConnection();
+      setConnectionStatus(result.backendConnected ? 'Connected' : 'Not Connected');
+      setDatabaseStatus(result.databaseConnected ? 'Connected' : 'Not Connected');
+      setDatabaseInfo(result.databaseInfo);
       
       // Test API availability
       const isAPIAvailable = await testAndSetAPIAvailability();
       setApiStatus(isAPIAvailable ? 'Available' : 'Not Available');
       
       // Test endpoints if backend is available
-      if (isBackendAvailable) {
+      if (result.backendConnected) {
         const endpoints = await testBackendEndpoints();
         setEndpointStatus(endpoints);
       }
@@ -31,19 +35,23 @@ export function ApiTest() {
 
   const handleRerunTests = async () => {
     setConnectionStatus('Checking...');
+    setDatabaseStatus('Checking...');
+    setDatabaseInfo(null);
     setApiStatus('Checking...');
     setEndpointStatus(null);
     
     // Test backend connection
-    const isBackendAvailable = await testBackendConnection();
-    setConnectionStatus(isBackendAvailable ? 'Connected' : 'Not Connected');
+    const result = await testBackendConnection();
+    setConnectionStatus(result.backendConnected ? 'Connected' : 'Not Connected');
+    setDatabaseStatus(result.databaseConnected ? 'Connected' : 'Not Connected');
+    setDatabaseInfo(result.databaseInfo);
     
     // Test API availability
     const isAPIAvailable = await testAndSetAPIAvailability();
     setApiStatus(isAPIAvailable ? 'Available' : 'Not Available');
     
     // Test endpoints if backend is available
-    if (isBackendAvailable) {
+    if (result.backendConnected) {
       const endpoints = await testBackendEndpoints();
       setEndpointStatus(endpoints);
     }
@@ -61,6 +69,28 @@ export function ApiTest() {
             {connectionStatus}
           </span>
         </div>
+        
+        <div className="flex items-center justify-between">
+          <span>Database Connection:</span>
+          <span className={databaseStatus === 'Connected' ? 'text-green-600' : 'text-red-600'}>
+            {databaseStatus}
+          </span>
+        </div>
+        
+        {databaseInfo && databaseInfo.status === 'connected' && (
+          <div className="text-sm text-muted-foreground ml-4">
+            <div>Host: {databaseInfo.host}</div>
+            <div>Name: {databaseInfo.name}</div>
+            {databaseInfo.ping && <div>Ping: {databaseInfo.ping}</div>}
+          </div>
+        )}
+        
+        {databaseInfo && databaseInfo.status !== 'connected' && (
+          <div className="text-sm text-muted-foreground ml-4">
+            <div>Status: {databaseInfo.status}</div>
+            {databaseInfo.message && <div>Message: {databaseInfo.message}</div>}
+          </div>
+        )}
         
         <div className="flex items-center justify-between">
           <span>API Status:</span>

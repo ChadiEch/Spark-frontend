@@ -18,7 +18,7 @@ export function Dashboard() {
   const { campaigns, loading: campaignsLoading } = useCampaigns();
   const { posts: postsData, loading: postsLoading } = usePosts();
   const { data: tasksData, loading: tasksLoading } = useTasks();
-  
+   
   const posts = postsData || [];
   const tasks = tasksData || [];
 

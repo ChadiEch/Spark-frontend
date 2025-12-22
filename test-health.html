@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Backend Health Test</title>
+</head>
+<body>
+    <h1>Backend Health Test</h1>
+    <button onclick="testHealth()">Test Health Endpoint</button>
+    <div id="result"></div>
+
+    <script>
+        async function testHealth() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Testing...</p>';
+            
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    resultDiv.innerHTML = `
+                        <h2>✅ Success!</h2>
+                        <p><strong>Backend Status:</strong> Connected</p>
+                        <p><strong>Database Status:</strong> ${data.data.database?.status || 'Unknown'}</p>
+                        ${data.data.database?.status === 'connected' ? 
+                            `<p><strong>Database Info:</strong></p>
+                             <ul>
+                                 <li>Host: ${data.data.database.host}</li>
+                                 <li>Name: ${data.data.database.name}</li>
+                                 <li>Port: ${data.data.database.port}</li>
+                             </ul>` : 
+                            `<p><strong>Database Message:</strong> ${data.data.database?.message || 'N/A'}</p>`
+                        }
+                        <p><strong>Uptime:</strong> ${Math.floor(data.data.uptime)} seconds</p>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <h2>❌ Error</h2>
+                        <p>Status: ${response.status}</p>
+                        <p>Data: ${JSON.stringify(data)}</p>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h2>❌ Network Error</h2>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -56,22 +56,38 @@ export default function Login() {
     event.preventDefault()
     setIsLoading(true)
     setApiError(null)
+    
+    // Validate inputs before submitting
+    if (!email || !password) {
+      setApiError('Please enter both email and password')
+      setIsLoading(false)
+      return
+    }
+    
+    if (emailError || passwordError) {
+      setApiError('Please fix the errors above')
+      setIsLoading(false)
+      return
+    }
 
     try {
-      // Basic validation
-      if (!email || !password) {
-        throw new Error('Please fill in all fields')
-      }
+      console.log('Attempting login with:', { email, password })
 
-      if (!email.includes('@')) {
-        throw new Error('Please enter a valid email address')
-      }
+      // Set a timeout for the login process to prevent indefinite hanging
+      const loginTimeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Login request timed out. Please try again.')), 8000)
+      );
 
-      console.log('Attempting login with:', { email, password });
-
-      // Authenticate user using the login function from AuthContext
-      const user = await login(email, password)
+      // Attempt to authenticate user
+      const loginPromise = login(email, password);
       
+      // Race the login against the timeout
+      const user = await Promise.race([loginPromise, loginTimeout])
+        .catch(error => {
+          console.error('Login timed out or failed:', error);
+          throw error;
+        });
+
       console.log('Login response:', user);
       
       if (user) {
@@ -102,6 +118,8 @@ export default function Login() {
         errorMessage = 'Invalid email or password. Please check your credentials and try again.';
       } else if (error.message && error.message.includes('Network Error')) {
         errorMessage = 'Network connection error. Please check your internet connection and try again.';
+      } else if (error.message && error.message.includes('timeout')) {
+        errorMessage = 'Login request timed out. Please check your network connection and try again.';
       } else if (error.response?.status === 401) {
         errorMessage = 'Authentication failed. Please check your email and password.';
       } else if (error.response?.status === 403) {
@@ -122,13 +140,6 @@ export default function Login() {
     }
   }
 
-  // Handle key down events for keyboard navigation
-  const handleKeyDown = (e: React.KeyboardEvent, nextRef: React.RefObject<HTMLInputElement | HTMLButtonElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      nextRef.current?.focus()
-    }
-  }
 
   return (
     <div className="container flex h-screen w-screen flex-col items-center justify-center">
@@ -169,18 +180,17 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   ref={emailRef}
-                  onKeyDown={(e) => handleKeyDown(e, passwordRef)}
-                  aria-invalid={!!emailError}
-                  aria-describedby={emailError ? "email-error" : undefined}
+                  
                 />
-                {emailError && (
-                  <p id="email-error" className="text-sm font-medium text-destructive">
-                    {emailError}
-                  </p>
-                )}
+                {emailError && <p className="text-sm text-red-500">{emailError}</p>}
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="password">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <Link to="/forgot-password" className="text-sm font-medium hover:underline">
+                    Forgot password?
+                  </Link>
+                </div>
                 <Input
                   id="password"
                   placeholder="••••••••"
@@ -192,20 +202,9 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   ref={passwordRef}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      submitRef.current?.click()
-                    }
-                  }}
-                  aria-invalid={!!passwordError}
-                  aria-describedby={passwordError ? "password-error" : undefined}
+                  
                 />
-                {passwordError && (
-                  <p id="password-error" className="text-sm font-medium text-destructive">
-                    {passwordError}
-                  </p>
-                )}
+                {passwordError && <p className="text-sm text-red-500">{passwordError}</p>}
               </div>
               <div className="flex items-center space-x-2">
                 <input
@@ -221,13 +220,13 @@ export default function Login() {
             <CardFooter className="flex flex-col">
               <Button 
                 ref={submitRef}
-                disabled={isLoading || !!emailError || !!passwordError} 
+                disabled={isLoading || !!emailError || !!passwordError}
                 className="w-full"
               >
                 {isLoading && (
                   <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Sign In
+                {isLoading ? 'Signing in...' : 'Sign in'}
               </Button>
               {isLoading && (
                 <p className="text-sm text-muted-foreground mt-2">

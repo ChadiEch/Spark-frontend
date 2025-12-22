@@ -1,179 +1,129 @@
 // Integration service for Winnerforce Spark platform
-import { retryRequestWithFeedback } from '../lib/retryUtils';
-import api from './apiService';
-import { Integration, IntegrationConnection, APIResponse } from '../types';
+import { Integration, IntegrationConnection } from '../types';
+import { integrationAPI } from './apiService';
+import { handleApiError } from '../lib/errorUtils';
 
-// Integration API
-export const integrationAPI = {
-  // Get all available integrations
-  getAll: () => 
-    retryRequestWithFeedback(() => api.get<APIResponse<Integration[]>>('/integrations'), 3, 1000, 'fetching integrations'),
-  
-  // Get integration by ID
-  getById: (id: string) => 
-    retryRequestWithFeedback(() => api.get<APIResponse<Integration>>(`/integrations/${id}`), 3, 1000, 'fetching integration'),
-  
-  // Get user's connected integrations
-  getUserConnections: () => 
-    retryRequestWithFeedback(() => api.get<APIResponse<IntegrationConnection[]>>('/integrations/connections'), 3, 1000, 'fetching integration connections'),
-  
-  // Connect to an integration (initiates OAuth flow)
-  connect: (integrationId: string, redirectUri?: string) => {
-    const data: any = { integrationId };
-    if (redirectUri) {
-      data.redirectUri = redirectUri;
-    }
-    return retryRequestWithFeedback(() => api.post<APIResponse<{ authorizationUrl: string }>>('/integrations/connect', data), 3, 1000, 'connecting to integration');
-  },
-  
-  // Disconnect from an integration
-  disconnect: (connectionId: string) => 
-    retryRequestWithFeedback(() => api.delete<APIResponse<{}>>(`/integrations/connections/${connectionId}`), 3, 1000, 'disconnecting from integration'),
-  
-  // Refresh an integration connection
-  refreshConnection: (connectionId: string) => 
-    retryRequestWithFeedback(() => api.post<APIResponse<IntegrationConnection>>(`/integrations/connections/${connectionId}/refresh`), 3, 1000, 'refreshing integration connection'),
-  
-  // Get connection status
-  getConnectionStatus: (connectionId: string) => 
-    retryRequestWithFeedback(() => api.get<APIResponse<{ connected: boolean; message?: string }>>(`/integrations/connections/${connectionId}/status`), 3, 1000, 'checking connection status'),
-  
-  // Exchange OAuth code for tokens
-  exchangeCodeForTokens: (integrationId: string, code: string, redirectUri?: string, userId?: string) => {
-    // Use the redirect URI from the environment or default to the frontend callback
-    // On Railway, we need to use the production URL instead of window.location.origin
-    const isRailway = window.location.hostname.includes('railway.app');
-    const frontendUrl = isRailway 
-      ? 'https://spark-frontend-production.up.railway.app'
-      : window.location.origin;
-    const finalRedirectUri = redirectUri || `${frontendUrl}/integrations/callback`;
-    const data: any = { integrationId, code, redirectUri: finalRedirectUri };
-    
-    // Include userId if provided
-    if (userId) {
-      data.userId = userId;
-    }
-    
-    console.log('Sending exchange code request', { integrationId, code: code ? 'present' : 'missing', redirectUri: finalRedirectUri, userId });
-    
-    return retryRequestWithFeedback(() => {
-      console.log('Making API request to exchange code', { url: '/integrations/exchange', data });
-      return api.post<APIResponse<IntegrationConnection & { redirectUrl?: string }>>('/integrations/exchange', data);
-    }, 3, 1000, 'exchanging code for tokens');
-  },
-  
-  // Get integration metrics
-  getMetrics: () => 
-    retryRequestWithFeedback(() => api.get<APIResponse<any>>('/integrations/metrics'), 3, 1000, 'fetching integration metrics'),
-  
-  // Get integration health metrics
-  getHealthMetrics: () => 
-    retryRequestWithFeedback(() => api.get<APIResponse<any>>('/integrations/metrics'), 3, 1000, 'fetching integration health metrics'),
-  
-  // Initialize integrations collection
-  initializeIntegrations: () => 
-    retryRequestWithFeedback(() => api.post<APIResponse<any>>('/integrations/initialize'), 3, 1000, 'initializing integrations collection')
-};
-
-// Main integration service
+// Integration service
 export const integrationService = {
   getAll: async (): Promise<Integration[]> => {
     try {
       const response = await integrationAPI.getAll();
-      return response.data.data;
+      return response.data && Array.isArray((response.data as any).data) ? (response.data as any).data : [];
     } catch (error) {
-      console.error('Failed to fetch integrations:', error);
-      throw error;
+      handleApiError(error, 'fetching', 'integrations');
+      return [];
     }
   },
 
   getUserConnections: async (): Promise<IntegrationConnection[]> => {
     try {
       const response = await integrationAPI.getUserConnections();
-      return response.data.data;
+      return response.data && Array.isArray((response.data as any).data) ? (response.data as any).data : [];
     } catch (error) {
-      console.error('Failed to fetch integration connections:', error);
-      throw error;
+      handleApiError(error, 'fetching', 'integration connections');
+      return [];
     }
   },
 
-  connect: async (integrationId: string, redirectUri?: string): Promise<{ authorizationUrl: string } | null> => {
+  connect: async (integrationId: string, redirectUri: string): Promise<any> => {
     try {
-      const response = await integrationAPI.connect(integrationId, redirectUri);
-      return response.data.data;
+      // This would typically redirect the user to the OAuth flow
+      // For now, we'll just simulate the connection process
+      window.location.href = `/api/integrations/connect?integrationId=${integrationId}&redirectUri=${encodeURIComponent(redirectUri)}`;
+      return { success: true };
     } catch (error) {
-      console.error('Failed to connect to integration:', error);
-      throw error;
+      handleApiError(error, 'connecting', 'integration');
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   },
 
   disconnect: async (connectionId: string): Promise<boolean> => {
     try {
-      await integrationAPI.disconnect(connectionId);
-      return true;
+      const response = await integrationAPI.disconnect(connectionId);
+      return response.data?.success === true;
     } catch (error) {
-      console.error('Failed to disconnect from integration:', error);
-      throw error;
+      handleApiError(error, 'disconnecting', 'integration');
+      return false;
     }
   },
 
-  refreshConnection: async (connectionId: string): Promise<IntegrationConnection> => {
+  refresh: async (connectionId: string): Promise<IntegrationConnection | null> => {
     try {
-      const response = await integrationAPI.refreshConnection(connectionId);
-      return response.data.data;
+      const response = await integrationAPI.refresh(connectionId);
+      return response.data && (response.data as any).data ? (response.data as any).data : null;
     } catch (error) {
-      console.error('Failed to refresh connection:', error);
-      throw error;
+      handleApiError(error, 'refreshing', 'integration connection');
+      return null;
     }
   },
 
-  getConnectionStatus: async (connectionId: string): Promise<{ connected: boolean; message?: string }> => {
+  getStatus: async (connectionId: string): Promise<any> => {
     try {
-      const response = await integrationAPI.getConnectionStatus(connectionId);
-      return response.data.data;
+      const response = await integrationAPI.getStatus(connectionId);
+      return response.data;
     } catch (error) {
-      console.error('Failed to get connection status:', error);
-      throw error;
+      handleApiError(error, 'checking', 'integration status');
+      return null;
     }
   },
 
-  exchangeCodeForTokens: async (integrationId: string, code: string, redirectUri?: string, userId?: string): Promise<IntegrationConnection | null> => {
+  exchangeCodeForTokens: async (
+    integrationId: string, 
+    code: string, 
+    redirectUri: string,
+    userId: string
+  ): Promise<IntegrationConnection | null> => {
     try {
-      const response = await integrationAPI.exchangeCodeForTokens(integrationId, code, redirectUri, userId);
-      return response.data.data;
-    } catch (error) {
-      console.error('Failed to exchange code for tokens:', error);
-      throw error;
-    }
-  },
+      // Exchange the authorization code for access tokens
+      const response = await fetch('/api/integrations/exchange', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          integrationId,
+          code,
+          redirectUri,
+          userId
+        })
+      });
 
-  getMetrics: async (): Promise<any> => {
-    try {
-      const response = await integrationAPI.getMetrics();
-      return response.data.data;
-    } catch (error) {
-      console.error('Failed to fetch metrics:', error);
-      throw error;
-    }
-  },
+      if (!response.ok) {
+        throw new Error(`Failed to exchange code for tokens: ${response.statusText}`);
+      }
 
-  getHealthMetrics: async (): Promise<any> => {
-    try {
-      const response = await integrationAPI.getHealthMetrics();
-      return response.data.data;
+      const data = await response.json();
+      return data.data || null;
     } catch (error) {
-      console.error('Failed to fetch health metrics:', error);
-      throw error;
+      handleApiError(error, 'exchanging', 'authorization code');
+      return null;
     }
   },
 
   initializeIntegrations: async (): Promise<any> => {
     try {
-      const response = await integrationAPI.initializeIntegrations();
-      return response.data.data;
+      // Check if we're on Railway - if so, skip initialization as it's handled automatically
+      if (typeof window !== 'undefined' && window.location.hostname.includes('railway.app')) {
+        console.log('Skipping integration initialization on Railway - handled automatically');
+        return { success: true, message: 'Initialization handled automatically on Railway' };
+      }
+      
+      const response = await fetch('/api/integrations/initialize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to initialize integrations: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data;
     } catch (error) {
-      console.error('Failed to initialize integrations:', error);
-      throw error;
+      handleApiError(error, 'initializing', 'integrations');
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
 };

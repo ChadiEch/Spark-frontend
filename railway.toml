@@ -5,7 +5,7 @@ builder = "nixpacks"
 startCommand = "npm run railway-start"
 
 [variables]
-NODE_VERSION = "22"
+NODE_VERSION = "20.19.0"
 NIXPACKS_NO_TSC = "1"
 NIXPACKS_NO_PINET = "1"
 

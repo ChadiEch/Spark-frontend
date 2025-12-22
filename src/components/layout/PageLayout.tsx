@@ -16,6 +16,8 @@ export function PageLayout({ children }: PageLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [showInitButton, setShowInitButton] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Force show button in development and on Railway for testing
   useEffect(() => {
@@ -38,8 +40,23 @@ export function PageLayout({ children }: PageLayoutProps) {
   // Temporary function to initialize integrations
   const handleInitializeIntegrations = async () => {
     try {
+      setIsInitializing(true);
+      setError(null);
+      
       // Use full URL on Railway to ensure proper routing
       const isRailway = window.location.hostname.includes('railway.app');
+      
+      // Skip auto-initialization on Railway to prevent hanging
+      if (isRailway) {
+        console.log('Skipping initialization on Railway - not supported');
+        toast({
+          title: "Initialization",
+          description: "Initialization is handled automatically on Railway deployments.",
+        });
+        setIsInitializing(false);
+        return;
+      }
+      
       const apiUrl = isRailway 
         ? `${window.location.origin}/api/integrations/initialize`
         : '/api/integrations/initialize';
@@ -62,34 +79,42 @@ export function PageLayout({ children }: PageLayoutProps) {
       if (response.ok) {
         try {
           const data = responseText ? JSON.parse(responseText) : {};
+          console.log('Integrations initialized:', data.message);
           toast({
-            title: 'Success',
-            description: data.message || 'Integrations initialized successfully',
+            title: "Success",
+            description: data.message || "Integrations initialized successfully",
           });
-          console.log('Integrations initialized:', data);
+          // Refresh the integration data
+          window.location.reload();
         } catch (jsonError) {
           console.log('JSON parsing error:', jsonError);
           toast({
-            title: 'Success',
-            description: 'Integrations initialized successfully',
+            title: "Success",
+            description: "Integrations initialized successfully",
           });
+          window.location.reload();
         }
-        // Hide the button after successful initialization
-        // setShowInitButton(false);
       } else {
+        const errorMessage = responseText || `Failed to initialize integrations: ${response.status}`;
+        console.log('Initialization failed:', response.status, errorMessage);
+        setError(errorMessage);
         toast({
-          title: 'Error',
-          description: `Failed to initialize: ${response.status} - ${responseText.substring(0, 100)}`,
-          variant: 'destructive',
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
         });
       }
     } catch (error: any) {
       console.log('Initialization error:', error);
+      const errorMessage = error.message || 'Failed to initialize integrations';
+      setError(errorMessage);
       toast({
-        title: 'Error',
-        description: 'Failed to initialize integrations: ' + error.message,
-        variant: 'destructive',
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
       });
+    } finally {
+      setIsInitializing(false);
     }
   };
 

@@ -36,7 +36,7 @@ export function HeroSection() {
       <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
         <div className="space-y-6">
           <div className="space-y-2">
-            <Badge className="bg-white/20 text-white border-0 hover:bg-white/30">
+            <Badge className="bg-red-500 text-white border-0 hover:bg-red-600">
               <Zap className="w-3 h-3 mr-1" />
               New Feature
             </Badge>
@@ -76,7 +76,7 @@ export function HeroSection() {
               <div className="text-sm text-white/70">Campaigns Managed</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold">89%</div>
+              <div className="text-2xl font-bold text-red-300">89%</div>
               <div className="text-sm text-white/70">Goal Achievement</div>
             </div>
             <div className="text-center">
@@ -109,7 +109,7 @@ export function HeroSection() {
                   <span>89%</span>
                 </div>
                 <div className="w-full bg-white/20 rounded-full h-1.5">
-                  <div className="bg-white h-1.5 rounded-full" style={{ width: '89%' }} />
+                  <div className="bg-red-500 h-1.5 rounded-full" style={{ width: '89%' }} />
                 </div>
               </div>
             </div>

@@ -20,16 +20,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check if user is already logged in
     const initializeAuth = async () => {
       try {
-        const currentUser = await simpleUserService.getCurrentUser();
+        console.log('AuthProvider: Initializing authentication...');
+        
+        // Check if we have cached user data to avoid unnecessary API calls
+        const cachedUser = localStorage.getItem('winnerforce_current_user');
+        if (cachedUser) {
+          try {
+            const parsedUser = JSON.parse(cachedUser);
+            // Check if the cached user data is recent (less than 5 minutes old)
+            const cacheTime = localStorage.getItem('winnerforce_auth_cache_time');
+            if (cacheTime && Date.now() - parseInt(cacheTime) < 5 * 60 * 1000) {
+              setUser(parsedUser);
+              console.log('AuthProvider: Using cached user data');
+              setIsLoading(false);
+              return;
+            }
+          } catch (e) {
+            // If parsing fails, continue with normal authentication
+            console.log('AuthProvider: Failed to parse cached user data, continuing with normal auth');
+          }
+        }
+        
+        // Add a timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Authentication check timed out')), 5000)
+        );
+        
+        const authPromise = simpleUserService.getCurrentUser();
+        
+        // Race the authentication check against the timeout
+        const currentUser = await Promise.race([authPromise, timeoutPromise])
+          .catch(error => {
+            console.error('AuthProvider: Authentication check failed or timed out:', error);
+            return null;
+          }) as User | null;
+          
         if (currentUser) {
           setUser(currentUser);
+          // Cache the user data
+          localStorage.setItem('winnerforce_current_user', JSON.stringify(currentUser));
+          localStorage.setItem('winnerforce_auth_cache_time', Date.now().toString());
+          console.log('AuthProvider: User authenticated:', currentUser.email);
+        } else {
+          console.log('AuthProvider: No authenticated user found');
+          // Clear cache if no user found
+          localStorage.removeItem('winnerforce_current_user');
+          localStorage.removeItem('winnerforce_auth_cache_time');
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
+        console.error('AuthProvider: Error initializing auth:', error);
         // Even if there's an error, we still need to finish loading
         setUser(null);
+        // Clear cache on error
+        localStorage.removeItem('winnerforce_current_user');
+        localStorage.removeItem('winnerforce_auth_cache_time');
       } finally {
         setIsLoading(false);
+        console.log('AuthProvider: Authentication check completed');
       }
     };
     
@@ -49,14 +96,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       // If we get here, authentication failed but no error was thrown
       throw new Error('Invalid email or password');
-    } catch (error) {
+    } catch (error: any) {
       console.error('AuthContext: Login error:', error);
+      // Handle timeout errors specifically
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        throw new Error('Login request timed out. Please try again.');
+      }
       // Re-throw the error so the UI can handle it
       throw error;
     }
   };
 
   const logout = () => {
+    console.log('AuthContext: Logging out user');
     // Import the userService logout function dynamically to avoid circular dependencies
     import('@/services/dataService').then(({ userService }) => {
       userService.logout();
@@ -65,6 +117,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     
     setUser(null);
+    // Clear any stored tokens and cache
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('winnerforce_current_user');
+    localStorage.removeItem('winnerforce_auth_cache_time');
+    localStorage.removeItem('rememberMe');
   };
 
   const updateProfile = async (userData: Partial<User>) => {

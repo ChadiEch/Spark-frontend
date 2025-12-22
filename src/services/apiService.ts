@@ -21,7 +21,11 @@ import { retryRequest, retryRequestWithFeedback } from '../lib/retryUtils';
 // Create axios instance
 // In production, VITE_API_URL should be set to the backend service URL
 // In development, it defaults to localhost:5001
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+// On Railway, this should be configured in the Railway dashboard
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (typeof window !== 'undefined' && window.location.hostname.includes('railway.app') 
+    ? `https://${window.location.hostname.replace('frontend', 'backend')}/api`
+    : 'http://localhost:5001/api');
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -29,6 +33,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 5000, // 5 second timeout
 });
 
 // Add auth token to requests
@@ -38,6 +43,14 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+      
+    // Add shorter timeouts for different environments
+    if (typeof window !== 'undefined' && window.location.hostname.includes('railway.app')) {
+      config.timeout = 5000; // 5 seconds on Railway
+    } else {
+      config.timeout = 5000; // 5 seconds in all other environments
+    }
+      
     return config;
   },
   (error) => {
@@ -51,42 +64,42 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
-    // If error is 401 and we haven't retried yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Handle timeout errors
+    if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+      console.error('API request timed out:', originalRequest.url);
+      return Promise.reject(new Error('Request timed out. Please try again.'));
+    }
+    
+    // Handle network errors
+    if (!error.response) {
+      console.error('Network error:', error.message);
+      return Promise.reject(new Error('Network error. Please check your connection.'));
+    }
+    
+    // Handle 401 errors (unauthorized)
+    if (error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
-      try {
-        // Get refresh token from localStorage
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (!refreshToken) {
-          // No refresh token available
-          // For the getMe endpoint, we don't want to redirect as it's expected to fail when not logged in
-          if (originalRequest.url.includes('/auth/me')) {
-            return Promise.reject(error);
-          }
-          // For other endpoints, we might want to handle the redirect differently
-          return Promise.reject(error);
-        }
-        
-        // Try to refresh the auth token
-        const response = await api.post('/auth/refresh', { refreshToken });
-        
-        // Store the new tokens
-        if (response.data && response.data.token) {
-          localStorage.setItem('token', response.data.token);
-          // Update the authorization header for the original request
-          originalRequest.headers.Authorization = `Bearer ${response.data.token}`;
-          // Retry the original request
+      // Try to refresh token
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (refreshToken) {
+        try {
+          const response = await authAPI.refreshToken(refreshToken);
+          const token = (response.data as any).token;
+          
+          // Store new token
+          localStorage.setItem('token', token);
+          
+          // Retry original request
+          originalRequest.headers.Authorization = `Bearer ${token}`;
           return api(originalRequest);
-        } else {
-          // If refresh didn't return a new token
-          return Promise.reject(error);
+        } catch (refreshError) {
+          // Refresh failed, log out user
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
+          window.location.href = '/login';
+          return Promise.reject(refreshError);
         }
-      } catch (refreshError) {
-        // If refresh fails, remove tokens
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        return Promise.reject(refreshError);
       }
     }
     
@@ -148,14 +161,12 @@ export const taskAPI = {
   update: (id: string, data: Partial<Task>) => api.put<APIResponse<Task>>('/tasks/' + id, data),
   trash: (id: string) => api.put<APIResponse<Task>>('/tasks/' + id + '/trash'),
   restore: (id: string) => api.put<APIResponse<Task>>('/tasks/' + id + '/restore'),
-  getTrashed: (params?: { page?: number; limit?: number }) => 
-    api.get<APIListResponse<Task>>('/tasks/trash', { params }),
   delete: (id: string) => api.delete<APIResponse<any>>('/tasks/' + id)
 };
 
 // Goal API
 export const goalAPI = {
-  getAll: (params?: { page?: number; limit?: number; search?: string; status?: string; owner?: string; startDate?: string; endDate?: string }) => 
+  getAll: (params?: { page?: number; limit?: number; search?: string; status?: string; assignee?: string; startDate?: string; endDate?: string }) => 
     api.get<APIListResponse<Goal>>('/goals', { params }),
   getById: (id: string) => api.get<APIResponse<Goal>>('/goals/' + id),
   create: (data: Partial<Goal>) => api.post<APIResponse<Goal>>('/goals', data),
@@ -165,36 +176,41 @@ export const goalAPI = {
 
 // Asset API
 export const assetAPI = {
-  getAll: (params?: { page?: number; limit?: number; search?: string; kind?: string; uploader?: string; startDate?: string; endDate?: string }) => 
+  getAll: (params?: { page?: number; limit?: number; search?: string; type?: string; owner?: string; startDate?: string; endDate?: string }) => 
     api.get<APIListResponse<Asset>>('/assets', { params }),
   getById: (id: string) => api.get<APIResponse<Asset>>('/assets/' + id),
   create: (data: Partial<Asset>) => api.post<APIResponse<Asset>>('/assets', data),
   update: (id: string, data: Partial<Asset>) => api.put<APIResponse<Asset>>('/assets/' + id, data),
-  delete: (id: string) => api.delete<APIResponse<any>>('/assets/' + id),
-  upload: (file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    return api.post<APIResponse<Asset>>('/assets', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-  }
+  delete: (id: string) => api.delete<APIResponse<any>>('/assets/' + id)
 };
 
 // Ambassador API
 export const ambassadorAPI = {
-  getAll: (params?: { page?: number; limit?: number; search?: string; startDate?: string; endDate?: string }) => 
+  getAll: (params?: { page?: number; limit?: number; search?: string; status?: string; program?: string; startDate?: string; endDate?: string }) => 
     api.get<APIListResponse<Ambassador>>('/ambassadors', { params }),
   getById: (id: string) => api.get<APIResponse<Ambassador>>('/ambassadors/' + id),
   create: (data: Partial<Ambassador>) => api.post<APIResponse<Ambassador>>('/ambassadors', data),
   update: (id: string, data: Partial<Ambassador>) => api.put<APIResponse<Ambassador>>('/ambassadors/' + id, data),
-  delete: (id: string) => api.delete<APIResponse<any>>('/ambassadors/' + id),
-  getPerformance: (id: string) => api.get<APIResponse<any>>('/ambassadors/' + id + '/performance'),
-  updateMetrics: (id: string, data: any) => api.put<APIResponse<Ambassador>>('/ambassadors/' + id + '/metrics', data)
+  delete: (id: string) => api.delete<APIResponse<any>>('/ambassadors/' + id)
+};
+
+// Analytics API
+export const analyticsAPI = {
+  getOverview: (startDate?: string, endDate?: string) => 
+    api.get<APIResponse<any>>('/analytics/overview', { params: { startDate, endDate } }),
+  getPosts: (startDate?: string, endDate?: string) => 
+    api.get<APIResponse<any>>('/analytics/posts', { params: { startDate, endDate } }),
+  getCampaigns: (startDate?: string, endDate?: string) => 
+    api.get<APIResponse<any>>('/analytics/campaigns', { params: { startDate, endDate } }),
+  getTasks: (startDate?: string, endDate?: string) => 
+    api.get<APIResponse<any>>('/analytics/tasks', { params: { startDate, endDate } }),
+  getGoals: (startDate?: string, endDate?: string) => 
+    api.get<APIResponse<any>>('/analytics/goals', { params: { startDate, endDate } })
 };
 
 // Activity API
 export const activityAPI = {
-  getAll: (params?: { page?: number; limit?: number; search?: string; type?: string; campaign?: string; goal?: string }) => 
+  getAll: (params?: { page?: number; limit?: number; search?: string; type?: string; user?: string; startDate?: string; endDate?: string }) => 
     api.get<APIListResponse<Activity>>('/activities', { params }),
   getById: (id: string) => api.get<APIResponse<Activity>>('/activities/' + id),
   create: (data: Partial<Activity>) => api.post<APIResponse<Activity>>('/activities', data),
@@ -202,81 +218,42 @@ export const activityAPI = {
   delete: (id: string) => api.delete<APIResponse<any>>('/activities/' + id)
 };
 
-// Analytics API
-export const analyticsAPI = {
-  getOverview: () => api.get<APIResponse<any>>('/analytics/overview'),
-  getDetailedReport: () => api.get<APIResponse<any>>('/analytics/report'),
-  getPlatformMetrics: () => api.get<APIResponse<any>>('/analytics/platforms'),
-  getCampaignPerformance: () => api.get<APIResponse<any>>('/analytics/campaigns'),
-  getContentPerformance: () => api.get<APIResponse<any>>('/analytics/content'),
-  exportReport: (format: string) => api.get<APIResponse<any>>(`/analytics/export/${format}`)
-};
-
-// Billing API
-export const billingAPI = {
-  getBillingInfo: () => api.get<APIResponse<Billing>>('/billing'),
-  updateSubscription: (plan: string) => api.put<APIResponse<Billing>>('/billing/subscription', { plan }),
-  updatePaymentMethod: (paymentMethod: Billing['paymentMethod']) => api.put<APIResponse<Billing>>('/billing/payment-method', { paymentMethod }),
-  getInvoiceHistory: () => api.get<APIListResponse<Invoice>>('/billing/invoices'),
-  addInvoice: (invoice: Omit<Invoice, 'id' | 'date'>) => api.post<APIResponse<Invoice>>('/billing/invoices', invoice)
-};
-
-// Security API
-export const securityAPI = {
-  getSecurityInfo: () => api.get<APIResponse<any>>('/security'),
-  changePassword: (currentPassword: string, newPassword: string) => 
-    api.post<APIResponse<any>>('/security/change-password', { currentPassword, newPassword }),
-  toggleTwoFactorAuth: (enabled: boolean) => 
-    api.post<APIResponse<any>>('/security/two-factor', { enabled }),
-  revokeSession: (sessionId: string) => 
-    api.delete<APIResponse<any>>(`/security/sessions/${sessionId}`),
-  revokeAllSessions: () => 
-    api.delete<APIResponse<any>>('/security/sessions')
+// Integration API
+export const integrationAPI = {
+  getAll: () => api.get<APIListResponse<Integration>>('/integrations'),
+  getById: (id: string) => api.get<APIResponse<Integration>>('/integrations/' + id),
+  getUserConnections: () => api.get<APIListResponse<IntegrationConnection>>('/integrations/connections'),
+  connect: (integrationId: string) => api.post<APIResponse<any>>('/integrations/connect', { integrationId }),
+  disconnect: (id: string) => api.delete<APIResponse<any>>('/integrations/connections/' + id),
+  refresh: (id: string) => api.post<APIResponse<IntegrationConnection>>('/integrations/connections/' + id + '/refresh'),
+  getStatus: (id: string) => api.get<APIResponse<any>>('/integrations/connections/' + id + '/status')
 };
 
 // Notification API
 export const notificationAPI = {
-  getAll: () => api.get<APIListResponse<any>>('/notifications'),
-  getUnreadCount: () => api.get<APIResponse<{count: number}>>('/notifications/unread-count'),
-  markAsRead: (id: string) => api.put<APIResponse<any>>(`/notifications/${id}/read`),
-  markAllAsRead: () => api.put<APIResponse<any>>('/notifications/read-all'),
-  delete: (id: string) => api.delete<APIResponse<any>>(`/notifications/${id}`),
-  deleteRead: () => api.delete<APIResponse<any>>('/notifications/read')
+  getAll: (params?: { page?: number; limit?: number; read?: boolean }) => 
+    api.get<APIListResponse<any>>('/notifications', { params }),
+  markAsRead: (id: string) => api.put<APIResponse<any>>('/notifications/' + id + '/read'),
+  markAllAsRead: () => api.put<APIResponse<any>>('/notifications/read-all')
 };
 
-// Search API
-export const searchAPI = {
-  searchAll: (query: string, type?: string, limit?: number) => 
-    api.get<APIResponse<any>>('/search', { params: { query, type, limit } }),
-  searchPosts: (params: { query: string; status?: string; platform?: string; limit?: number; page?: number }) => 
-    api.get<APIListResponse<Post>>('/search/posts', { params }),
-  searchCampaigns: (params: { query: string; status?: string; limit?: number; page?: number }) => 
-    api.get<APIListResponse<Campaign>>('/search/campaigns', { params }),
-  searchTasks: (params: { query: string; status?: string; priority?: string; limit?: number; page?: number }) => 
-    api.get<APIListResponse<Task>>('/search/tasks', { params })
+// Billing API
+export const billingAPI = {
+  getInvoices: () => api.get<APIListResponse<Invoice>>('/billing/invoices'),
+  getInvoiceById: (id: string) => api.get<APIResponse<Invoice>>('/billing/invoices/' + id),
+  getBillingInfo: () => api.get<APIResponse<Billing>>('/billing/info')
 };
 
 // Export API
 export const exportAPI = {
-  exportData: (entity: string, format: string, startDate?: string, endDate?: string) => 
-    api.get(`/export/${entity}/${format}`, { 
-      params: { startDate, endDate },
-      responseType: 'blob'
-    }),
-  exportAnalytics: (format: string) => 
-    api.get(`/export/analytics/${format}`, { 
-      responseType: 'blob'
-    })
+  exportData: (type: string, format: string) => 
+    api.get('/export/' + type + '/' + format, { responseType: 'blob' })
 };
 
-// Invitation API
-export const invitationAPI = {
-  inviteMember: (data: { email: string; role: string }) => 
-    api.post<APIResponse<{ invitationId: string; email: string; role: string; invitationLink: string; expiresAt: string }>>('/invitations', data),
-  getInvitation: (token: string) => 
-    api.get<APIResponse<{ email: string; role: string; invitedBy: string; expiresAt: string }>>(`/invitations/${token}`),
-  acceptInvitation: (token: string, data: { name: string; password: string }) => 
-    api.post<APIResponse<{ userId: string; email: string; name: string }>>(`/invitations/${token}/accept`, data)
+// Search API
+export const searchAPI = {
+  global: (query: string) => api.get<APIResponse<any>>('/search', { params: { q: query } })
 };
 
+// Export the api instance as default for backward compatibility
 export default api;

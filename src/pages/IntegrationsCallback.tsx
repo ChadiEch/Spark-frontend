@@ -4,7 +4,7 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, XCircle } from 'lucide-react';
-import { integrationService } from '@/services/integrationService';
+import { integrationService } from '../services/integrationService';
 import { toast } from '@/components/ui/use-toast';
 
 export default function IntegrationsCallback() {
@@ -16,17 +16,44 @@ export default function IntegrationsCallback() {
   useEffect(() => {
     const handleOAuthCallback = async () => {
       try {
-        // Parse query parameters
+        // Check if we're receiving success or error parameters from backend redirect
         const params = new URLSearchParams(location.search);
-        const code = params.get('code');
-        const state = params.get('state');
+        const success = params.get('success');
         const error = params.get('error');
         
-        console.log('OAuth callback received', { code, state, error, search: location.search });
+        // If we have success or error parameters, it means we were redirected from backend
+        if (success !== null || error) {
+          if (error) {
+            throw new Error(decodeURIComponent(error));
+          }
+          
+          setStatus('success');
+          setMessage('Authentication successful! Integration connected.');
+          
+          // Show success toast
+          toast({
+            title: "Integration Connected",
+            description: "The integration has been successfully connected to your account.",
+          });
+          
+          // Redirect to settings after a delay
+          setTimeout(() => {
+            navigate('/settings?tab=integrations');
+          }, 3000);
+          return;
+        }
+        
+        // Otherwise, this is a direct OAuth callback from the provider
+        // Parse query parameters
+        const code = params.get('code');
+        const state = params.get('state');
+        const errorParam = params.get('error');
+        
+        console.log('OAuth callback received', { code, state, error: errorParam, search: location.search });
         
         // Check for OAuth errors
-        if (error) {
-          throw new Error(`OAuth error: ${error}`);
+        if (errorParam) {
+          throw new Error(`OAuth error: ${errorParam}`);
         }
         
         if (!code) {
@@ -60,13 +87,14 @@ export default function IntegrationsCallback() {
         setStatus('loading');
         setMessage('Exchanging authorization code for access tokens...');
         
-        // Use the redirect URI from the environment or default to the frontend callback
-        // On Railway, we need to use the production URL instead of window.location.origin
-        const isRailway = window.location.hostname.includes('railway.app');
-        const frontendUrl = isRailway 
-          ? 'https://spark-frontend-production.up.railway.app'
-          : window.location.origin;
-        const redirectUri = `${frontendUrl}/integrations/callback`;
+        // Use the redirect URI from the environment or default to the backend callback
+        // Use the backend URL for redirect URI to match OAuth provider configuration
+        // On Railway, this should be configured in the Railway dashboard
+        const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 
+          (typeof window !== 'undefined' && window.location.hostname.includes('railway.app') 
+            ? `https://${window.location.hostname.replace('frontend', 'backend')}`
+            : 'http://localhost:5001');
+        const redirectUri = `${backendUrl}/api/integrations/callback`;
         console.log('Exchanging code for tokens', { integrationId, code, redirectUri, userId });
         const connection = await integrationService.exchangeCodeForTokens(integrationId, code, redirectUri, userId);
         
