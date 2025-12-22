@@ -25,8 +25,8 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
     try {
       const result = await integrationService.connect(integration.id);
       if (result?.authorizationUrl) {
-        // Redirect to OAuth provider
-        window.location.href = result.authorizationUrl;
+        // Open OAuth provider in a new window
+        window.open(result.authorizationUrl, '_blank', 'width=600,height=800');
       }
     } catch (error) {
       toast({
